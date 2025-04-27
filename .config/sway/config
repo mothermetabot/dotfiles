@@ -4,6 +4,14 @@
 #
 # Read `man 5 sway` for a complete reference.
 
+
+# Disable laptop display when closed
+bindswitch lid:on output eDP-1 disable
+bindswitch lid:off output eDP-1 enable
+
+# Disable laptop display if sway started with closed lid already
+exec_always cat /proc/acpi/button/lid/LID/state | awk '{print $2}' | grep -q 'closed' && swaymsg output eDP-1 disable
+
 ### Variables
 #
 # Logo key. Use Mod1 for Alt.
