@@ -25,7 +25,7 @@ set $menu $rofi_cmd -show combi -combi-modes drun#run -modes combi
 #
 # Default wallpaper (more resolutions are available in /usr/share/backgrounds/sway/)
 # Requires: desktop-backgrounds-compat, swaybg, jxl-pixbuf-loader
-output * bg /usr/share/backgrounds/default.jxl fill
+output * bg /home/esguio/wallpapers/moon-1.jpeg fill
 #
 # Example configuration:
 #
