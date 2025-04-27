@@ -5,4 +5,4 @@ eval "$(starship init zsh)"
 source ./.shell/aliases.zsh
 
 # Append variables
-source ./.shell/vars.zsh
+source ./.shell/var.zsh
