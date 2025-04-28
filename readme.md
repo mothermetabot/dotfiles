@@ -4,4 +4,5 @@
 - nvim
 - tmux
 - stow
+- starship
 
