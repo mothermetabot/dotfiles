@@ -118,6 +118,13 @@ vim.schedule(function()
   vim.opt.clipboard = 'unnamedplus'
 end)
 
+-- Add keymap for code actions
+vim.keymap.set('n', '<leader>.', '<cmd>lua vim.lsp.buf.code_action()<CR>', { desc = 'Code Actions' })
+-- Add keymap for toggle term
+vim.keymap.set('n', '<leader>tt', '<cmd>ToggleTerm direction=float<CR>', { desc = 'Toggle [T]erminal' })
+-- Add keymap for term manager
+vim.keymap.set('n', '<leader>ts', '<cmd>:Telescope toggleterm_manager<CR>', { desc = 'Terminal [Search]' })
+
 -- Enable break indent
 vim.opt.breakindent = true
 
@@ -127,7 +134,6 @@ vim.opt.undofile = true
 -- Case-insensitive searching UNLESS \C or one or more capital letters in the search term
 vim.opt.ignorecase = true
 vim.opt.smartcase = true
-
 -- Keep signcolumn on by default
 vim.opt.signcolumn = 'yes'
 
@@ -938,6 +944,7 @@ require('lazy').setup({
   },
   -- Toggle Terminal
   -- TODO: Set Keys for the terminal toggle
+  { 'akinsho/toggleterm.nvim', version = '*', config = true },
   {
     'ryanmsnyder/toggleterm-manager.nvim',
     dependencies = {
