@@ -1,0 +1,6 @@
+[font]
+normal = { family = "Fira Code" }
+size = 12.25
+
+[terminal]
+shell = { program = "C:\\Users\\Sergio.Lopes\\AppData\\Local\\Programs\\Git\\usr\\bin\\bash.exe"}
