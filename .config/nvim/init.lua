@@ -1,88 +1,8 @@
---[[
-
-=====================================================================
-==================== READ THIS BEFORE CONTINUING ====================
-=====================================================================
-========                                    .-----.          ========
-========         .----------------------.   | === |          ========
-========         |.-""""""""""""""""""-.|   |-----|          ========
-========         ||                    ||   | === |          ========
-========         ||   KICKSTART.NVIM   ||   |-----|          ========
-========         ||                    ||   | === |          ========
-========         ||                    ||   |-----|          ========
-========         ||:Tutor              ||   |:::::|          ========
-========         |'-..................-'|   |____o|          ========
-========         `"")----------------(""`   ___________      ========
-========        /::::::::::|  |::::::::::\  \ no mouse \     ========
-========       /:::========|  |==hjkl==:::\  \ required \    ========
-========      '""""""""""""'  '""""""""""""'  '""""""""""'   ========
-========                                                     ========
-=====================================================================
-=====================================================================
-
-What is Kickstart?
-
-  Kickstart.nvim is *not* a distribution.
-
-  Kickstart.nvim is a starting point for your own configuration.
-    The goal is that you can read every line of code, top-to-bottom, understand
-    what your configuration is doing, and modify it to suit your needs.
-
-    Once you've done that, you can start exploring, configuring and tinkering to
-    make Neovim your own! That might mean leaving Kickstart just the way it is for a while
-    or immediately breaking it into modular pieces. It's up to you!
-
-    If you don't know anything about Lua, I recommend taking some time to read through
-    a guide. One possible example which will only take 10-15 minutes:
-      - https://learnxinyminutes.com/docs/lua/
-
-    After understanding a bit more about Lua, you can use `:help lua-guide` as a
-    reference for how Neovim integrates Lua.
-    - :help lua-guide
-    - (or HTML version): https://neovim.io/doc/user/lua-guide.html
-
-Kickstart Guide:
-
-  TODO: The very first thing you should do is to run the command `:Tutor` in Neovim.
-
-    If you don't know what this means, type the following:
-      - <escape key>
-      - :
-      - Tutor
-      - <enter key>
-
-    (If you already know the Neovim basics, you can skip this step.)
-
-  Once you've completed that, you can continue working through **AND READING** the rest
-  of the kickstart init.lua.
-
-  Next, run AND READ `:help`.
-    This will open up a help window with some basic information
-    about reading, navigating and searching the builtin help documentation.
-
-    This should be the first place you go to look when you're stuck or confused
-    with something. It's one of my favorite Neovim features.
-
-    MOST IMPORTANTLY, we provide a keymap "<space>sh" to [s]earch the [h]elp documentation,
-    which is very useful when you're not exactly sure of what you're looking for.
-
-  I have left several `:help X` comments throughout the init.lua
-    These are hints about where to find more information about the relevant settings,
-    plugins or Neovim features used in Kickstart.
-
-   NOTE: Look for lines like this
-
-    Throughout the file. These are for you, the reader, to help you understand what is happening.
-    Feel free to delete them once you know what you're doing, but they should serve as a guide
-    for when you are first encountering a few different constructs in your Neovim config.
-
-If you experience any errors while trying to install kickstart, run `:checkhealth` for more info.
-
-I hope you enjoy your Neovim journey,
-- TJ
-
-P.S. You can delete this when you're done too. It's your config now! :)
---]]
+--Change windows shell to use bash
+if vim.fn.has 'win32' then
+  vim.o.shell = 'C:/Users/Sergio.Lopes/AppData/Local/Programs/Git/usr/bin/bash.exe'
+  vim.o.shellcmdflag = '-s'
+end
 
 -- Set <space> as the leader key
 -- See `:help mapleader`
@@ -121,9 +41,31 @@ end)
 -- Add keymap for code actions
 vim.keymap.set('n', '<leader>.', '<cmd>lua vim.lsp.buf.code_action()<CR>', { desc = 'Code Actions' })
 -- Add keymap for toggle term
-vim.keymap.set('n', '<leader>tt', '<cmd>ToggleTerm direction=float<CR>', { desc = 'Toggle [T]erminal' })
--- Add keymap for term manager
-vim.keymap.set('n', '<leader>ts', '<cmd>:Telescope toggleterm_manager<CR>', { desc = 'Terminal [Search]' })
+vim.keymap.set('n', '<leader>t', '<cmd>ToggleTerm<CR>', { desc = 'Toggle [T]erminal' })
+
+-- When scrolling with L and H recenter the screen automatically
+vim.keymap.set('n', 'L', 'Lzz')
+vim.keymap.set('n', 'H', 'Hzz')
+vim.keymap.set('n', '<C-D>', '<C-D>zz')
+vim.keymap.set('n', '<C-U>', '<C-U>zz')
+
+-- Explorer keymaps
+vim.keymap.set('n', '<leader>df', '<cmd>Ex<CR>', { desc = '[F]ullscreen explorer' })
+vim.keymap.set('n', '<leader>dv', '<cmd>Vex<CR>', { desc = '[V]ertical exporer' })
+vim.keymap.set('n', '<leader>dh', '<cmd>Sex<CR>', { desc = '[H]orizontal explorer' })
+
+-- Git keymaps
+vim.keymap.set('n', '<leader>gbf', '<cmd>Gitsigns blame <CR>', { desc = 'Open git blame [F]ile' })
+vim.keymap.set('n', '<leader>ghp', '<cmd>Gitsigns preview_hunk<CR>', { desc = 'Hunk [P]review' })
+vim.keymap.set('n', '<leader>ghs', '<cmd>Gitsigns stage_hunk<CR>', { desc = 'Hunk [S]tage' })
+vim.keymap.set('n', '<leader>gbl', '<cmd>Gitsigns blame_line<CR>', { desc = 'Toggle git blame [L]ine' })
+vim.keymap.set('n', '<leader>gdh', '<cmd>Gitsigns diffthis HEAD<CR>', { desc = '[D]iff [H]ead' })
+
+-- swap {} because it makes more sense on my keyboard
+vim.keymap.set('n', '{', '}')
+vim.keymap.set('n', '}', '{')
+vim.keymap.set('n', ')', '(')
+vim.keymap.set('n', '(', ')')
 
 -- Enable break indent
 vim.opt.breakindent = true
@@ -351,7 +293,15 @@ require('lazy').setup({
       spec = {
         { '<leader>s', group = '[S]earch' },
         { '<leader>t', group = '[T]oggle' },
-        { '<leader>h', group = 'Git [H]unk', mode = { 'n', 'v' } },
+
+        -- Git group
+        { '<leader>g', group = '[G]it', mode = { 'n', 'v' } },
+        { '<leader>gh', group = 'Git [H]unk', mode = { 'n', 'v' } },
+        { '<leader>gb', group = 'Git [B]lame', mode = { 'n', 'v' } },
+        { '<leader>gd', group = 'Git [D]iff', mode = { 'n', 'v' } },
+
+        -- Explorer group
+        { '<leader>d', group = '[D]irectory explorer', mode = 'n' },
       },
     },
   },
@@ -486,7 +436,10 @@ require('lazy').setup({
       -- Automatically install LSPs and related tools to stdpath for Neovim
       -- Mason must be loaded before its dependents so we need to set it up here.
       -- NOTE: `opts = {}` is the same as calling `require('mason').setup({})`
-      { 'williamboman/mason.nvim', opts = {} },
+      {
+        'williamboman/mason.nvim',
+        opts = {},
+      },
       'williamboman/mason-lspconfig.nvim',
       'WhoIsSethDaniel/mason-tool-installer.nvim',
 
@@ -687,7 +640,9 @@ require('lazy').setup({
         -- But for many setups, the LSP (`ts_ls`) will work just fine
         -- ts_ls = {},
         --
-
+        --
+        terraformls = {},
+        jsonls = {},
         lua_ls = {
           -- cmd = { ... },
           -- filetypes = { ... },
@@ -801,17 +756,16 @@ require('lazy').setup({
         end)(),
         dependencies = {
           -- `friendly-snippets` contains a variety of premade snippets.
-          --    See the README about individual language/framework/plugin snippets:
-          --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
+          --   {
+          --     'rafamadriz/friendly-snippets',
+          --     config = function()
+          --       require('luasnip.loaders.from_vscode').lazy_load()
+          --     end,
+          --   },
         },
         opts = {},
       },
+
       'folke/lazydev.nvim',
     },
     --- @module 'blink.cmp'
@@ -853,8 +807,8 @@ require('lazy').setup({
 
       completion = {
         -- By default, you may press `<c-space>` to show the documentation.
-        -- Optionally, set `auto_show = true` to show the documentation after a delay.
-        documentation = { auto_show = false, auto_show_delay_ms = 500 },
+        -- -- Optionally, set `auto_show = true` to show the documentation after a delay.
+        -- documentation = { auto_show = true, auto_show_delay_ms = 650 },
       },
 
       sources = {
