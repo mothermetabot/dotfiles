@@ -4,6 +4,7 @@ config.opts()
 config.autocmd()
 config.keymaps()
 
+
 -- bootstrap lazy.nvim if not installed
 local lazypath = vim.fn.stdpath 'data' .. '/lazy/lazy.nvim'
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
