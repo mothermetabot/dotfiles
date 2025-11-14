@@ -140,6 +140,7 @@ return {
       local capabilities = require('blink.cmp').get_lsp_capabilities()
 
       local servers = {
+        csharp_ls = {},
         -- clangd = {},
         -- gopls = {},
         -- pyright = {},

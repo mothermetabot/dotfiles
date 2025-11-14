@@ -60,6 +60,25 @@ return {
     vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
     vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
+    vim.keymap.set('n', '<leader>y', '+y', {desc = 'Copy to system clipboard'})
+    vim.keymap.set('v', '<leader>y', '+y', {desc = 'Copy to system clipboard'})
+    vim.keymap.set('n', '<leader>p', '+p', {desc = 'Paste from system clipboard'})
+    vim.keymap.set('v', '<leader>p', '+p', {desc = 'Paste from system clipboard'})
+
+    local function open_last_term_or_new()
+      -- Opens the last terminal buffer or creates a new one if it doesnt exist
+      local buffers = vim.api.nvim_list_bufs()
+      vim.print(buffers)
+
+      for _, buf in ipairs(buffers) do
+        if string.find(vim.api.nvim_buf_get_name(buf), 'term://') and vim.api.nvim_buf_is_valid(buf) then
+          vim.cmd('buffer ' + buf)
+        else
+          vim.cmd 'term'
+        end
+      end
+    end
+
     -- When scrolling with L and H recenter the screen automatically
     vim.keymap.set('n', 'L', 'Lzz')
     vim.keymap.set('n', 'H', 'Hzz')
@@ -75,5 +94,7 @@ return {
     vim.keymap.set('v', '}', '{')
     vim.keymap.set('v', ')', '(')
     vim.keymap.set('v', '(', ')')
+
+    vim.keymap.set('n', '<leader>t', open_last_term_or_new)
   end,
 }

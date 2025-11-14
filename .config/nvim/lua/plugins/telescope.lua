@@ -28,6 +28,11 @@ return { -- Fuzzy Finder (files, lsp, etc)
           require('telescope.themes').get_dropdown(),
         },
       },
+      pickers = {
+        find_files = {
+          hidden = true,
+        },
+      },
     }
 
     pcall(require('telescope').load_extension, 'fzf')
@@ -44,7 +49,7 @@ return { -- Fuzzy Finder (files, lsp, etc)
     vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
     vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
     vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
-    vim.keymap.set('n', '<leader>st','<cmd>TodoTelescope <cr>', { desc = '[ ] Find existing buffers' })
+    vim.keymap.set('n', '<leader>st', '<cmd>TodoTelescope <cr>', { desc = '[ ] Find existing buffers' })
 
     vim.keymap.set('n', '<leader>/', function()
       builtin.current_buffer_fuzzy_find(require('telescope.themes').get_dropdown {
