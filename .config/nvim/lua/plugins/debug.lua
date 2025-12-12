@@ -27,28 +27,28 @@ return {
   keys = {
     -- Basic debugging keymaps, feel free to change to your liking!
     {
-      '<F5>',
+      '<leader>dst',
       function()
         require('dap').continue()
       end,
       desc = 'Debug: Start/Continue',
     },
     {
-      '<F1>',
+      '<leader>din',
       function()
         require('dap').step_into()
       end,
       desc = 'Debug: Step Into',
     },
     {
-      '<F2>',
+      '<leader>dov',
       function()
         require('dap').step_over()
       end,
       desc = 'Debug: Step Over',
     },
     {
-      '<F3>',
+      '<leader>dou',
       function()
         require('dap').step_out()
       end,
@@ -70,7 +70,7 @@ return {
     },
     -- Toggle to see last session result. Without this, you can't see session output in case of unhandled exception.
     {
-      '<F7>',
+      '<leader>dla',
       function()
         require('dapui').toggle()
       end,
@@ -80,6 +80,8 @@ return {
   config = function()
     local dap = require 'dap'
     local dapui = require 'dapui'
+
+    local mason_registry = require 'mason-registry'
 
     require('mason-nvim-dap').setup {
       -- Makes a best effort to setup the various debuggers with
@@ -94,6 +96,7 @@ return {
       -- online, please don't ask me how to install them :)
       ensure_installed = {
         -- Update this to ensure that you have the debuggers for the langs you want
+        'codelldb',
         'delve',
       },
     }
@@ -135,6 +138,73 @@ return {
     dap.listeners.after.event_initialized['dapui_config'] = dapui.open
     dap.listeners.before.event_terminated['dapui_config'] = dapui.close
     dap.listeners.before.event_exited['dapui_config'] = dapui.close
+
+    local function configure_rust_dap()
+      local ok, codelldb = pcall(mason_registry.get_package, 'codelldb')
+      if not ok or not codelldb:is_installed() then
+        return
+      end
+
+      local extension_path = codelldb:get_install_path() .. '/extension/'
+      local codelldb_path = extension_path .. 'adapter/codelldb'
+      local liblldb_path = extension_path .. 'lldb/lib/liblldb.so'
+
+      local sysname = vim.loop.os_uname().sysname
+      if sysname == 'Windows_NT' then
+        codelldb_path = codelldb_path .. '.exe'
+        liblldb_path = extension_path .. 'lldb/bin/liblldb.dll'
+      elseif sysname == 'Darwin' then
+        liblldb_path = extension_path .. 'lldb/lib/liblldb.dylib'
+      end
+
+      local args = { '--port', '${port}' }
+      if liblldb_path and vim.loop.fs_stat(liblldb_path) then
+        args = { '--liblldb', liblldb_path, '--port', '${port}' }
+      end
+
+      dap.adapters.codelldb = {
+        type = 'server',
+        port = '${port}',
+        executable = {
+          command = codelldb_path,
+          args = args,
+          detached = sysname ~= 'Windows_NT',
+        },
+      }
+
+      local function pick_debug_target()
+        local default_bin = vim.fn.getcwd() .. '/target/debug/'
+        return vim.fn.input('Path to executable: ', default_bin, 'file')
+      end
+
+      dap.configurations.rust = {
+        {
+          name = 'Launch Rust executable',
+          type = 'codelldb',
+          request = 'launch',
+          program = pick_debug_target,
+          cwd = '${workspaceFolder}',
+          stopOnEntry = false,
+        },
+        {
+          name = 'Attach to process',
+          type = 'codelldb',
+          request = 'attach',
+          pid = require('dap.utils').pick_process,
+          cwd = '${workspaceFolder}',
+        },
+      }
+    end
+
+    configure_rust_dap()
+
+    if mason_registry.on then
+      mason_registry:on('package:install:success', function(pkg)
+        if pkg.name == 'codelldb' then
+          configure_rust_dap()
+        end
+      end)
+    end
 
     -- Install golang specific config
     require('dap-go').setup {

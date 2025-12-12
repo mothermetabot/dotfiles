@@ -13,7 +13,7 @@ local function load_random_color()
 end
 
 local function load_main_color()
-  vim.cmd.colorscheme('vague')
+  vim.cmd.colorscheme('nightfox')
 end
 
 vim.api.nvim_create_autocmd('User', {

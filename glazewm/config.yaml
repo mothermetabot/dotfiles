@@ -121,27 +121,42 @@ window_behavior:
 
 workspaces:
   - name: '1'
-    display_name: 'Code'
+    display_name: '1 Work'
     keep_alive: true
   - name: '2'
-    display_name: 'Browser'
+    display_name: '2 Browser'
     keep_alive: true
   - name: '3'
-    display_name: 'Work'
+    display_name: '3 Code 1'
     keep_alive: true
   - name: '4'
-    display_name: 'Misc'
+    display_name: '4 Code 2'
+    keep_alive: true
   - name: '5'
+    display_name: '5 Code 3'
+    keep_alive: true
   - name: '6'
+    display_name: '6 Code 4'
+    keep_alive: true
   - name: '7'
+    display_name: '7 Misc 1'
   - name: '8'
+    display_name: '8 Misc 2'
   - name: '9'
+    display_name: '9 Misc 3'
 
 window_rules:
   - commands: ['ignore']
     match:
       # Ignores any Zebar windows.
       - window_process: { equals: 'zebar' }
+      - window_process: { regex: '.*?Greenshot.*?' }
+      - window_process: { regex: '.*[Ii]nkscape.*' }
+      - window_title: { equals: 'Proteus Now Updater' }
+      - window_process: { equals: 'assistant' }
+      - window_title: { equals: 'Proteus Now Assistant' }
+      - window_title: { regex: '.*[Ss][Aa][Pp].*' }
+      - window_title: { regex: '.*?Administrator:.*' }
 
       # Ignores picture-in-picture windows for browsers.
       - window_title: { regex: '[Pp]icture.in.[Pp]icture' }
@@ -160,13 +175,10 @@ window_rules:
       # Focuses the browser workspace when a browser window is focused.
       - window_process: { equals: 'chrome.exe' }
       - window_process: { equals: 'firefox.exe' }
-      - window_process: { equals: 'msedge.exe' }
 
-  - commands: ["move --workspace 3"]
+  - commands: ["move --workspace 1"]
     match:
-      - window_process: { equals: 'Microsoft Teams' }
-        window_title: { regex: '.*? - Microsoft Teams' }
-      
+      - window_title: { regex: '.*?Microsoft Teams.*' }
       # outlook
       - window_process: { equals: 'OUTLOOK' }
         window_title: { regex: '.*? - Outlook' }
@@ -270,7 +282,7 @@ keybindings:
   # Launch CMD terminal. Alternatively, use `shell-exec wt` or
   # `shell-exec %ProgramFiles%/Git/git-bash.exe` to start Windows
   # Terminal and Git Bash respectively.
-  - commands: ['shell-exec %ProgramFiles%\Alacritty\alacritty.exe']
+  - commands: ['shell-exec C:\Users\Sergio.Lopes\AppData\Local\Microsoft\WindowsApps\wt.exe']
     bindings: ['alt+t']
 
   # Launch CMD terminal. Alternatively, use `shell-exec wt` or

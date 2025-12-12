@@ -6,3 +6,6 @@ size = 12.25
 
 [terminal]
 shell = { program = "C:\\Users\\Sergio.Lopes\\AppData\\Local\\Programs\\Git\\bin\\bash.exe"}
+
+[env]
+NODE_TLS_REJECT_UNAUTHORIZED = "0"

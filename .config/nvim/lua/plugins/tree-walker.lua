@@ -32,4 +32,11 @@ return {
     --          to the jumplist, while maintaining some ability to go back.
     jumplist = true,
   },
+
+  config = function()
+    vim.keymap.set({ 'n', 'v' }, '<C-k>', '<cmd>Treewalker Up<cr>', { silent = true })
+    vim.keymap.set({ 'n', 'v' }, '<C-j>', '<cmd>Treewalker Down<cr>', { silent = true })
+    vim.keymap.set({ 'n', 'v' }, '<leader>h', '<cmd>Treewalker Left<cr>', { silent = true })
+    vim.keymap.set({ 'n', 'v' }, '<leader>l', '<cmd>Treewalker Right<cr>', { silent = true })
+  end,
 }

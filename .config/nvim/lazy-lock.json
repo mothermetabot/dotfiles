@@ -5,6 +5,7 @@
   "catppuccin": { "branch": "main", "commit": "30fa4d122d9b22ad8b2e0ab1b533c8c26c4dde86" },
   "conform.nvim": { "branch": "master", "commit": "973f3cb73887d510321653044791d7937c7ec0fa" },
   "copilot.lua": { "branch": "master", "commit": "3680bebcc95dfd6c7509466367e66f6dc64a5140" },
+  "diffview.nvim": { "branch": "main", "commit": "4516612fe98ff56ae0415a259ff6361a89419b0a" },
   "fidget.nvim": { "branch": "main", "commit": "d9ba6b7bfe29b3119a610892af67602641da778e" },
   "gitsigns.nvim": { "branch": "main", "commit": "7bbc674278f22376850576dfdddf43bbc17e62b5" },
   "indent-blankline.nvim": { "branch": "master", "commit": "005b56001b2cb30bfa61b7986bc50657816ba4ba" },
@@ -36,5 +37,6 @@
   "treewalker.nvim": { "branch": "main", "commit": "5895593a4bccadd0a91988cbd3fe0908508e7451" },
   "typescript-tools.nvim": { "branch": "master", "commit": "bf11d98ad5736e1cbc1082ca9a03196d45c701f1" },
   "undotree": { "branch": "main", "commit": "eab459ab87dd249617b5f7187bb69e614a083047" },
-  "vague.nvim": { "branch": "main", "commit": "6c44ca64a7efc89bb86f501602e6ddd51bc92b3a" }
+  "vague.nvim": { "branch": "main", "commit": "6c44ca64a7efc89bb86f501602e6ddd51bc92b3a" },
+  "vim-log-highlighting": { "branch": "master", "commit": "1037e26f3120e6a6a2c0c33b14a84336dee2a78f" }
 }

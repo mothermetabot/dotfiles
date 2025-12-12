@@ -139,33 +139,82 @@ return {
 
       local capabilities = require('blink.cmp').get_lsp_capabilities()
 
+      -- This list is now strictly for servers Mason MUST manage
       local servers = {
         csharp_ls = {},
-        -- clangd = {},
-        -- gopls = {},
-        -- pyright = {},
       }
-      -- Ensure the servers and tools above are installed
+
       local ensure_installed = vim.tbl_keys(servers or {})
       vim.list_extend(ensure_installed, {
-        'stylua', -- Used to format Lua code
+        'stylua',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
       require('mason-lspconfig').setup {
-        ensure_installed = {}, -- explicitly set to an empty table (Kickstart populates installs via mason-tool-installer)
+        ensure_installed = {},
         automatic_installation = false,
         handlers = {
           function(server_name)
             local server = servers[server_name] or {}
-            -- This handles overriding only values explicitly passed
-            -- by the server configuration above. Useful when disabling
-            -- certain features of an LSP (for example, turning off formatting for ts_ls)
             server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
             require('lspconfig')[server_name].setup(server)
           end,
         },
       }
+
+      -- PORTABILITY: Auto-install Azure Pipelines LS via npm if missing
+      -- This checks if the command exists in your path.
+      if vim.fn.executable('azure-pipelines-language-server') == 0 then
+        -- Notify the user
+        vim.notify('Azure Pipelines LS not found. Installing via npm...', vim.log.levels.INFO)
+        
+        -- Run the install command.
+        -- NOTE: If you are on Linux/Mac and need sudo for -g, this might fail or prompt for password in background.
+        -- It is safer to install without -g if you have a local bin path set up, but -g is standard.
+        local cmd = 'npm install -g azure-pipelines-language-server'
+        local out = vim.fn.system(cmd)
+        
+        if vim.v.shell_error ~= 0 then
+          vim.notify('Failed to install azure-pipelines-ls: ' .. out, vim.log.levels.ERROR)
+        else
+          vim.notify('Azure Pipelines LS installed successfully!', vim.log.levels.INFO)
+        end
+      end
+
+      -- MANUAL SETUP: Attach the server manually
+     local is_windows = vim.fn.has('win32') == 1 or vim.fn.has('win64') == 1
+      local cmd_binary = 'azure-pipelines-language-server'
+      if is_windows then
+        cmd_binary = cmd_binary .. '.cmd'
+      end
+
+      local util = require('lspconfig.util')
+
+      require('lspconfig').azure_pipelines_ls.setup({
+        cmd = { cmd_binary, '--stdio' },
+        capabilities = capabilities,
+        
+        -- FIX: Look for .azure, then .git, then fallback to CWD
+        root_dir = function(fname)
+          -- This looks up the directory tree for a ".azure" folder first
+          local root = util.root_pattern('.azure', '.git')(fname)
+          
+          -- We must return *something* (never nil) or the server crashes with UriError
+          return root or vim.fn.getcwd()
+        end,
+
+        settings = {
+          yaml = {
+            schemas = {
+              ["https://raw.githubusercontent.com/microsoft/azure-pipelines-vscode/master/service-schema.json"] = {
+                "/azure-pipelines.yml",
+                "/*.azure-pipelines.yml",
+                "azure-pipelines.yml",
+              },
+            },
+          },
+        },
+      })
     end,
   },
 
