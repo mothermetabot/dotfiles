@@ -8,7 +8,7 @@ if defined DOTFILES_HOME set "USER_HOME=%DOTFILES_HOME%"
 if not "%~1"=="" set "USER_HOME=%~1"
 
 echo [1/4] Checking prerequisites...
-where powershell >nul 2>nul || (
+where powershell || (
   echo ERROR: powershell is required.
   exit /b 1
 )
@@ -23,7 +23,7 @@ if not exist "%USER_HOME%" (
 echo Using home path: "%USER_HOME%"
 
 echo [2/4] Installing Scoop (if missing)...
-where scoop >nul 2>nul
+where scoop
 if errorlevel 1 (
   powershell -NoProfile -ExecutionPolicy Bypass -Command ^
     "Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser -Force; iwr -useb get.scoop.sh | iex"
@@ -39,6 +39,10 @@ set "PATH=%USERPROFILE%\scoop\shims;%PATH%"
 echo [3/4] Installing packages with Scoop...
 call :ensure_scoop_bucket "main" || exit /b 1
 call :ensure_scoop_bucket "extras" || exit /b 1
+rem Install common Scoop dependencies up front to reduce prompts.
+call :install_scoop_pkg "git" || exit /b 1
+call :install_scoop_pkg "7zip" || exit /b 1
+call :install_scoop_pkg "aria2" || exit /b 1
 call :install_scoop_pkg "fzf" || exit /b 1
 call :install_scoop_pkg "ripgrep" || exit /b 1
 call :install_scoop_pkg "uv" || exit /b 1
@@ -76,13 +80,13 @@ exit /b 0
 
 :install_scoop_pkg
 set "PKG=%~1"
-where scoop >nul 2>nul || (
+where scoop || (
   echo ERROR: scoop command is unavailable.
   exit /b 1
 )
 
 echo Installing %PKG%...
-scoop install %PKG% >nul 2>nul
+scoop install %PKG%
 if errorlevel 1 (
   echo WARNING: Could not install "%PKG%" from scoop. Continuing...
 )
@@ -90,10 +94,10 @@ exit /b 0
 
 :ensure_scoop_bucket
 set "BUCKET=%~1"
-scoop bucket list | findstr /I /R /C:"^%BUCKET% " >nul 2>nul
+scoop bucket list | findstr /I /R /C:"^%BUCKET% "
 if errorlevel 1 (
   echo Adding scoop bucket "%BUCKET%"...
-  scoop bucket add %BUCKET% >nul 2>nul
+  scoop bucket add %BUCKET%
   if errorlevel 1 (
     echo ERROR: Failed to add scoop bucket "%BUCKET%".
     exit /b 1
@@ -103,7 +107,7 @@ exit /b 0
 
 :ensure_dir
 if not exist "%~1" (
-  mkdir "%~1" >nul 2>nul
+  mkdir "%~1"
   if errorlevel 1 (
     echo ERROR: Failed to create directory "%~1"
     exit /b 1
@@ -116,7 +120,7 @@ if not exist "%~1" (
   echo WARNING: Source file missing: "%~1"
   exit /b 0
 )
-copy /Y "%~1" "%~2" >nul
+copy /Y "%~1" "%~2"
 if errorlevel 1 (
   echo ERROR: Failed to copy "%~1" to "%~2"
   exit /b 1
@@ -133,14 +137,14 @@ if not exist "%TARGET%" (
 )
 
 if exist "%LINK%" (
-  del /F /Q "%LINK%" >nul 2>nul
+  del /F /Q "%LINK%"
   if exist "%LINK%" (
     echo ERROR: Could not remove existing file "%LINK%"
     exit /b 1
   )
 )
 
-mklink /H "%LINK%" "%TARGET%" >nul
+mklink /H "%LINK%" "%TARGET%"
 if errorlevel 1 (
   echo ERROR: Failed to create hardlink "%LINK%" -> "%TARGET%"
   exit /b 1
@@ -163,7 +167,7 @@ if exist "%LINK%" (
   exit /b 1
 )
 
-mklink /J "%LINK%" "%TARGET%" >nul
+mklink /J "%LINK%" "%TARGET%"
 if errorlevel 1 (
   echo ERROR: Failed to create junction "%LINK%" -> "%TARGET%"
   exit /b 1
@@ -173,7 +177,7 @@ exit /b 0
 :set_system_env
 set "ENV_NAME=%~1"
 set "ENV_VALUE=%~2"
-setx %ENV_NAME% "%ENV_VALUE%" /M >nul 2>nul
+setx %ENV_NAME% "%ENV_VALUE%" /M
 if errorlevel 1 (
   echo WARNING: Failed to set machine env var %ENV_NAME%.
   echo WARNING: Run this script elevated to set system-wide variables.
