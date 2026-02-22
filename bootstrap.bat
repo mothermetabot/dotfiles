@@ -69,7 +69,7 @@ call :mk_junction "%USER_HOME%\.config" "%DOTFILES%\.config" || exit /b 1
 call :mk_junction "%USER_HOME%\komorebi" "%DOTFILES%\komorebi" || exit /b 1
 call :mk_junction "%USERPROFILE%\AppData\Local\nvim" "%DOTFILES%\.config\nvim" || exit /b 1
 
-echo Setting machine-level environment variables for komorebi/whkd...
+echo Setting user-level environment variables for komorebi/whkd...
 call :set_system_env "KOMOREBI_CONFIG_HOME" "%DOTFILES%\komorebi" || exit /b 1
 call :set_system_env "WHKD_CONFIG_HOME" "%DOTFILES%\komorebi" || exit /b 1
 
@@ -86,7 +86,7 @@ where scoop || (
 )
 
 echo Installing %PKG%...
-scoop install %PKG%
+call scoop install %PKG%
 if errorlevel 1 (
   echo WARNING: Could not install "%PKG%" from scoop. Continuing...
 )
@@ -94,10 +94,10 @@ exit /b 0
 
 :ensure_scoop_bucket
 set "BUCKET=%~1"
-scoop bucket list | findstr /I /R /C:"^%BUCKET% "
+call scoop bucket list | findstr /I /R /C:"^%BUCKET% "
 if errorlevel 1 (
   echo Adding scoop bucket "%BUCKET%"...
-  scoop bucket add %BUCKET%
+  call scoop bucket add %BUCKET%
   if errorlevel 1 (
     echo ERROR: Failed to add scoop bucket "%BUCKET%".
     exit /b 1
@@ -177,10 +177,9 @@ exit /b 0
 :set_system_env
 set "ENV_NAME=%~1"
 set "ENV_VALUE=%~2"
-setx %ENV_NAME% "%ENV_VALUE%" /M
+setx %ENV_NAME% "%ENV_VALUE%"
 if errorlevel 1 (
-  echo WARNING: Failed to set machine env var %ENV_NAME%.
-  echo WARNING: Run this script elevated to set system-wide variables.
+  echo WARNING: Failed to set user env var %ENV_NAME%.
   exit /b 0
 )
 exit /b 0
