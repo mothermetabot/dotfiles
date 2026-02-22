@@ -1,6 +1,20 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
+REM ============================================================
+REM Bootstrap.bat
+REM - Runs normal bootstrap steps non-elevated
+REM - Only sets SYSTEM-wide env vars elevated (setx /M)
+REM ============================================================
+
+REM --- If invoked in "elevated env var setter" mode, do that and exit ---
+if /i "%~1"=="--set-system-env" (
+  shift /1
+  call :set_system_env "%~1" "%~2"
+  exit /b %ERRORLEVEL%
+)
+
+REM --- Compute paths / inputs ---
 set "DOTFILES=%~dp0"
 if "%DOTFILES:~-1%"=="\" set "DOTFILES=%DOTFILES:~0,-1%"
 set "USER_HOME=%USERPROFILE%"
@@ -33,15 +47,18 @@ if errorlevel 1 (
   )
 )
 
-rem Refresh PATH for this cmd session after scoop install.
+REM Refresh PATH for this cmd session after scoop install.
 set "PATH=%USERPROFILE%\scoop\shims;%PATH%"
 
 echo [3/4] Installing packages with Scoop...
 call :ensure_scoop_bucket "main" || exit /b 1
 call :ensure_scoop_bucket "extras" || exit /b 1
-rem Install common Scoop dependencies up front to reduce prompts.
+
+REM Install common Scoop dependencies up front to reduce prompts.
 call :install_scoop_pkg "coreutils" || exit /b 1
 call :install_scoop_pkg "which" || exit /b 1
+call :install_scoop_pkg "curl" || exit /b 1
+call :install_scoop_pkg "winget" || exit /b 1
 call :install_scoop_pkg "git" || exit /b 1
 call :install_scoop_pkg "7zip" || exit /b 1
 call :install_scoop_pkg "aria2" || exit /b 1
@@ -52,6 +69,16 @@ call :install_scoop_pkg "neovim" || exit /b 1
 call :install_scoop_pkg "starship" || exit /b 1
 call :install_scoop_pkg "lazygit" || exit /b 1
 call :install_scoop_pkg "komorebi" || exit /b 1
+call :install_scoop_pkg "whkd" || exit /b 1
+call :install_scoop_pkg "flameshot" || exit /b 1
+call :install_scoop_pkg "nodejs" || exit /b 1
+call :install_scoop_pkg "rustup" || exit /b 1
+
+echo Disabling aria2 warning
+scoop config aria2-warning-enabled false
+
+echo [3/4] Installing MSVC toolchain
+call winget install -e --id Microsoft.VisualStudio.2022.BuildTools --override "--passive --wait --add Microsoft.VisualStudio.Workload.VCTools;includeRecommended"
 
 echo [4/4] Creating links and copying config files...
 
@@ -72,14 +99,15 @@ call :mk_junction "%USER_HOME%\.config" "%DOTFILES%\.config" || exit /b 1
 call :mk_junction "%USER_HOME%\komorebi" "%DOTFILES%\komorebi" || exit /b 1
 call :mk_junction "%USERPROFILE%\AppData\Local\nvim" "%DOTFILES%\.config\nvim" || exit /b 1
 
-echo Setting user-level environment variables for komorebi/whkd...
-call :set_system_env "KOMOREBI_CONFIG_HOME" "%DOTFILES%\komorebi" || exit /b 1
-call :set_system_env "WHKD_CONFIG_HOME" "%DOTFILES%\komorebi" || exit /b 1
+echo Setting SYSTEM-level environment variables for komorebi/whkd (will prompt for admin)...
+call :elevate_set_system_env "KOMOREBI_CONFIG_HOME" "%DOTFILES%\komorebi" || exit /b 1
+call :elevate_set_system_env "WHKD_CONFIG_HOME" "%DOTFILES%\komorebi" || exit /b 1
 
 echo.
 echo Bootstrap finished.
 echo Open a new terminal so PATH changes are picked up.
 exit /b 0
+
 
 :install_scoop_pkg
 set "PKG=%~1"
@@ -95,6 +123,7 @@ if errorlevel 1 (
 )
 exit /b 0
 
+
 :ensure_scoop_bucket
 set "BUCKET=%~1"
 call scoop bucket list | findstr /I /R /C:"^%BUCKET% "
@@ -108,6 +137,7 @@ if errorlevel 1 (
 )
 exit /b 0
 
+
 :ensure_dir
 if not exist "%~1" (
   mkdir "%~1"
@@ -117,6 +147,7 @@ if not exist "%~1" (
   )
 )
 exit /b 0
+
 
 :copy_file
 if not exist "%~1" (
@@ -129,6 +160,7 @@ if errorlevel 1 (
   exit /b 1
 )
 exit /b 0
+
 
 :mk_hardlink
 set "LINK=%~1"
@@ -154,6 +186,7 @@ if errorlevel 1 (
 )
 exit /b 0
 
+
 :mk_junction
 set "LINK=%~1"
 set "TARGET=%~2"
@@ -177,15 +210,32 @@ if errorlevel 1 (
 )
 exit /b 0
 
+
+REM --- runs ONLY the system env var set in an elevated cmd instance ---
+:elevate_set_system_env
+set "ENV_NAME=%~1"
+set "ENV_VALUE=%~2"
+
+REM Relaunch just this batch label elevated via PowerShell UAC prompt
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "Start-Process cmd -Verb RunAs -ArgumentList '/c','\"%~f0\" --set-system-env \"%ENV_NAME%\" \"%ENV_VALUE%\"' -Wait"
+if errorlevel 1 (
+  echo ERROR: Failed to elevate and set system env var %ENV_NAME%.
+  exit /b 1
+)
+exit /b 0
+
+
 :set_system_env
 set "ENV_NAME=%~1"
 set "ENV_VALUE=%~2"
-setx %ENV_NAME% "%ENV_VALUE%"
+setx "%ENV_NAME%" "%ENV_VALUE%" /M
 if errorlevel 1 (
-  echo WARNING: Failed to set user env var %ENV_NAME%.
-  exit /b 0
+  echo WARNING: Failed to set system env var %ENV_NAME%.
+  exit /b 1
 )
 exit /b 0
+
 
 :remove_ps_aliases
 echo Removing PowerShell aliases for common Unix commands...
