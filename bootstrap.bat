@@ -40,6 +40,8 @@ echo [3/4] Installing packages with Scoop...
 call :ensure_scoop_bucket "main" || exit /b 1
 call :ensure_scoop_bucket "extras" || exit /b 1
 rem Install common Scoop dependencies up front to reduce prompts.
+call :install_scoop_pkg "coreutils" || exit /b 1
+call :install_scoop_pkg "which" || exit /b 1
 call :install_scoop_pkg "git" || exit /b 1
 call :install_scoop_pkg "7zip" || exit /b 1
 call :install_scoop_pkg "aria2" || exit /b 1
@@ -56,6 +58,7 @@ echo [4/4] Creating links and copying config files...
 call :ensure_dir "%USERPROFILE%\Documents\WindowsPowerShell" || exit /b 1
 call :ensure_dir "%USERPROFILE%\Documents\PowerShell" || exit /b 1
 call :ensure_dir "%USERPROFILE%\AppData\Local" || exit /b 1
+call :remove_ps_aliases || exit /b 1
 
 call :copy_file "%DOTFILES%\.bash_profile" "%USER_HOME%\.bash_profile" || exit /b 1
 call :copy_file "%DOTFILES%\.gitconfig" "%USER_HOME%\.gitconfig" || exit /b 1
@@ -180,6 +183,17 @@ set "ENV_VALUE=%~2"
 setx %ENV_NAME% "%ENV_VALUE%"
 if errorlevel 1 (
   echo WARNING: Failed to set user env var %ENV_NAME%.
+  exit /b 0
+)
+exit /b 0
+
+:remove_ps_aliases
+echo Removing PowerShell aliases for common Unix commands...
+powershell -NoProfile -ExecutionPolicy Bypass -Command ^
+  "$aliases = 'ls','cat','pwd','rm','mv','cp','mkdir','rmdir','touch','man','wget','curl','grep','sed','awk';" ^
+  "foreach($a in $aliases){ Remove-Item -Path (\"Alias:$a\") -ErrorAction SilentlyContinue }"
+if errorlevel 1 (
+  echo WARNING: Failed to remove one or more PowerShell aliases.
   exit /b 0
 )
 exit /b 0
