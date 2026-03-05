@@ -139,50 +139,45 @@ return {
 
       local capabilities = require('blink.cmp').get_lsp_capabilities()
 
+      local util = require 'lspconfig.util'
+
       local servers = {
         csharp_ls = {},
-        pyright = {},
         rust_analyzer = {},
-        black = {}
+        pyright = {
+          settings = {
+            python = {
+              venvPath = '.',
+              venv = '.venv',
+            },
+          },
+          on_new_config = function(config, root_dir)
+            local python = root_dir .. '\\.venv\\Scripts\\python.exe'
+            config.settings = config.settings or {}
+            config.settings.python = config.settings.python or {}
+            config.settings.python.pythonPath = python
+          end,
+          root_dir = util.root_pattern('pyproject.toml', 'pyrightconfig.json', '.git'),
+        },
       }
 
-      local ensure_installed = vim.tbl_keys(servers or {})
+      local ensure_installed = vim.tbl_keys(servers)
       vim.list_extend(ensure_installed, {
         'stylua',
+        'black',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
 
       require('mason-lspconfig').setup {
-        ensure_installed = {
-          'pyright',
-        },
-        automatic_installation = false,
-        handlers = {
-          function(server_name)
-            local server = servers[server_name] or {}
-            server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
-            require('lspconfig')[server_name].setup(server)
-          end,
-        },
+        ensure_installed = vim.tbl_keys(servers),
+        automatic_enable = false,
       }
-      local util = require 'lspconfig.util'
 
-      require('lspconfig').pyright.setup {
-        capabilities = capabilities,
-        settings = {
-          python = {
-            venvPath = '.',
-            venv = '.venv',
-          },
-        },
-        on_new_config = function(config, root_dir)
-          local python = root_dir .. '\\.venv\\Scripts\\python.exe'
-          config.settings = config.settings or {}
-          config.settings.python = config.settings.python or {}
-          config.settings.python.pythonPath = python
-        end,
-        root_dir = util.root_pattern('pyproject.toml', 'pyrightconfig.json', '.git'),
-      }
+      for server_name, server in pairs(servers) do
+        server.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server.capabilities or {})
+        vim.lsp.config(server_name, server)
+        vim.lsp.enable(server_name)
+      end
     end,
   },
 
