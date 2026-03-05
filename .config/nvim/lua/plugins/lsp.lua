@@ -143,7 +143,7 @@ return {
         csharp_ls = {},
         pyright = {},
         rust_analyzer = {},
-        black = {},
+        black = {}
       }
 
       local ensure_installed = vim.tbl_keys(servers or {})
@@ -155,7 +155,6 @@ return {
       require('mason-lspconfig').setup {
         ensure_installed = {
           'pyright',
-          'black',
         },
         automatic_installation = false,
         handlers = {
