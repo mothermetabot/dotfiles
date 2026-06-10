@@ -1,0 +1,20 @@
+--- Startup times for process: Primary (or UI client) ---
+
+times in msec
+ clock   self+sourced   self:  sourced script
+ clock   elapsed:              other lines
+
+000.005  000.005: --- NVIM STARTING ---
+000.045  000.039: event init
+000.173  000.128: early init
+025.844  025.671: locale set
+025.899  000.055: init first window
+026.943  001.044: inits 1
+026.965  000.022: window checked
+026.972  000.007: parsing arguments
+028.960  000.808  000.808: require('vim.shared')
+030.255  000.234  000.234: require('vim.inspect')
+030.540  000.260  000.260: require('vim._options')
+030.546  001.562  001.069: require('vim._editor')
+030.549  002.519  000.148: require('vim._init_packages')
+030.573  001.081: init lua interpreter

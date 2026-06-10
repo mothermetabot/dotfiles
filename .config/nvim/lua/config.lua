@@ -52,6 +52,13 @@ return {
     vim.api.nvim_create_user_command('O', 'Oil', { nargs = 0 })
     vim.api.nvim_create_user_command('Vo', 'vsplit ', { nargs = 0 })
     vim.api.nvim_create_user_command('Ho', 'Oil', { nargs = 0 })
+    local function normalize_dos()
+      vim.cmd 'edit ++ff=dos'
+      vim.cmd 'write'
+    end
+
+    vim.api.nvim_create_user_command('Normalize', normalize_dos, {})
+    vim.api.nvim_create_user_command('N', normalize_dos, {})
   end,
   keymaps = function()
     vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
@@ -92,16 +99,6 @@ return {
     vim.keymap.set('n', 'H', 'Hzz')
     vim.keymap.set('n', '<C-D>', '<C-D>zz')
     vim.keymap.set('n', '<C-U>', '<C-U>zz')
-
-    -- swap {} because it makes more sense on my keyboard
-    vim.keymap.set('n', '{', '}')
-    vim.keymap.set('n', '}', '{')
-    vim.keymap.set('n', ')', '(')
-    vim.keymap.set('n', '(', ')')
-    vim.keymap.set('v', '{', '}')
-    vim.keymap.set('v', '}', '{')
-    vim.keymap.set('v', ')', '(')
-    vim.keymap.set('v', '(', ')')
 
     -- Close all buffers except current one
     local function close_all_other_buffers()

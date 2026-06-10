@@ -140,9 +140,14 @@ return {
       local capabilities = require('blink.cmp').get_lsp_capabilities()
 
       local util = require 'lspconfig.util'
+      require('mason').setup {
+        registries = {
+          'github:mason-org/mason-registry',
+          'github:Crashdummyy/mason-registry',
+        },
+      }
 
       local servers = {
-        csharp_ls = {},
         rust_analyzer = {},
         pyright = {
           settings = {
@@ -163,11 +168,11 @@ return {
 
       local ensure_installed = vim.tbl_keys(servers)
       vim.list_extend(ensure_installed, {
+        'roslyn',
         'stylua',
         'black',
       })
       require('mason-tool-installer').setup { ensure_installed = ensure_installed }
-
       require('mason-lspconfig').setup {
         ensure_installed = vim.tbl_keys(servers),
         automatic_enable = false,

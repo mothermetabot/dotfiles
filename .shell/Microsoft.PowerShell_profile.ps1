@@ -1,9 +1,29 @@
 # --- ll: GNU ls-style long listing ---
 function ll {
-    # Compact "long" listing: size, date, name (no perms/links/owner/group)
-    & ls -afgHo 
+    param(
+        [string]$Path = ".",
+        [switch]$Force
+    )
+
+    $dirParams = @{
+        Path = $Path
+    }
+
+    if ($Force) {
+        $dirParams.Force = $true
+    }
+
+    dir @dirParams |
+        Select-Object `
+            @{ Name = 'Size'; Expression = {
+                if ($_.PSIsContainer) { '<DIR>' }
+                else { '{0,10:N0}' -f $_.Length }
+            }},
+            @{ Name = 'LastWriteTime'; Expression = { $_.LastWriteTime } },
+            @{ Name = 'Name'; Expression = { $_.Name } }
 }
 
+# GIT quality of life functions
 # --- gl: pretty, minimal git log ---
 function gl {
     [CmdletBinding()]
@@ -23,6 +43,39 @@ function gl {
         --max-count=30 `
         @rev
 }
+
+function gs {
+    param(
+        [Parameter(Position = 0)]
+        [string]$Path
+    )
+
+    if ($PSBoundParameters.ContainsKey('Path')) {
+        git status -s -- "$Path"
+    }
+    else {
+        git status -s
+    }
+}
+
+# navigate upwards to repo root and run git add .
+function ga {
+    $repoRoot = git rev-parse --show-toplevel 2>$null
+
+    if (-not $repoRoot) {
+        Write-Error "Not inside a git repository."
+        return
+    }
+
+    Push-Location $repoRoot
+    try {
+        git add .
+    }
+    finally {
+        Pop-Location
+    }
+}
+
 # --- autocomplete git branch names for: gl <branch...> ---
 Register-ArgumentCompleter -CommandName gl -ParameterName Branches -ScriptBlock {
     param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
@@ -210,3 +263,18 @@ Set-Alias -Name ci -Value __zoxide_zi -Option AllScope -Scope Global -Force
 # `echo $profile` in PowerShell):
 #
 # Invoke-Expression (& { (zoxide init powershell | Out-String) })
+#
+
+# FUZZY find for command history
+if (-not (Get-Module -ListAvailable -Name PSFzf)) {
+    Install-Module -Name PSFzf -Scope CurrentUser
+}
+Import-Module PSFzf
+Set-PsFzfOption -PSReadlineChordReverseHistory 'Ctrl+r'
+
+if (-not (Get-Module -ListAvailable -Name posh-git)) {
+      Install-Module posh-git -Scope CurrentUser -Force
+  }
+  Import-Module posh-git
+
+

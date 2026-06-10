@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/Sergio.Lopes/home/.dotfiles/.config/**)",
+      "Bash(nvim --version)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:echasnovski.com)"
+    ]
+  }
+}
