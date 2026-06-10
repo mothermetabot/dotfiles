@@ -74,6 +74,7 @@ call :install_scoop_pkg "whkd" || (set "rc=!errorlevel!" & call :die !rc! "Faile
 call :install_scoop_pkg "flameshot" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (flameshot).")
 call :install_scoop_pkg "nodejs" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (nodejs).")
 call :install_scoop_pkg "rustup" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (rustup).")
+call :install_scoop_pkg "tree-sitter" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (rustup).")
 
 echo Disabling aria2 warning
 call scoop config aria2-warning-enabled false

@@ -1,3 +1,6 @@
+-- Local helper: a :Term command for named/scratchpad/split terminals.
+-- Pure Lua, no external plugin. Wired up from init.lua via require('term').setup().
+
 local M = {}
 
 -- Store named terminal buffers: name -> bufnr
@@ -8,13 +11,13 @@ local function buf_is_valid(bufnr)
 end
 
 local function open_terminal(name)
-  vim.cmd('terminal')
+  vim.cmd 'terminal'
   local bufnr = vim.api.nvim_get_current_buf()
   if name then
     vim.api.nvim_buf_set_name(bufnr, name)
     terminals[name] = bufnr
   end
-  vim.cmd('startinsert')
+  vim.cmd 'startinsert'
   return bufnr
 end
 
@@ -23,7 +26,7 @@ function M.scratchpad()
   local bufnr = terminals[name]
   if buf_is_valid(bufnr) then
     vim.cmd('buffer ' .. bufnr)
-    vim.cmd('startinsert')
+    vim.cmd 'startinsert'
   else
     open_terminal(name)
   end
@@ -33,10 +36,7 @@ function M.split(direction, count)
   count = math.max(1, math.min(count, 6))
   local cmd = direction == 'vertical' and 'vsplit' or 'split'
 
-  -- First terminal in current window
   open_terminal(nil)
-
-  -- Remaining terminals in new splits
   for _ = 2, count do
     vim.cmd(cmd)
     open_terminal(nil)
@@ -55,9 +55,7 @@ function M.setup()
     if subcmd == 'scratchpad' then
       M.scratchpad()
     elseif subcmd == 'split' then
-      local direction = args[2] or 'vertical'
-      local count = tonumber(args[3]) or 1
-      M.split(direction, count)
+      M.split(args[2] or 'vertical', tonumber(args[3]) or 1)
     elseif subcmd == 'new' then
       M.new(args[2])
     else
@@ -77,12 +75,4 @@ function M.setup()
   })
 end
 
--- Wire it up as a lazy.nvim plugin spec (local plugin, no repo)
-return {
-  dir = '.',
-  name = 'term',
-  config = function()
-    M.setup()
-  end,
-  lazy = false,
-}
+return M

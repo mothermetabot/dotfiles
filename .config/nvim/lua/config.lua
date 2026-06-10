@@ -59,6 +59,16 @@ return {
 
     vim.api.nvim_create_user_command('Normalize', normalize_dos, {})
     vim.api.nvim_create_user_command('N', normalize_dos, {})
+
+    -- Oil is lazy-loaded; open it when Neovim is started on a directory.
+    vim.api.nvim_create_autocmd('VimEnter', {
+      callback = function()
+        local arg = vim.fn.argv(0)
+        if type(arg) == 'string' and arg ~= '' and vim.fn.isdirectory(arg) == 1 then
+          vim.cmd('Oil ' .. vim.fn.fnameescape(arg))
+        end
+      end,
+    })
   end,
   keymaps = function()
     vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
