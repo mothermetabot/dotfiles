@@ -1480,14 +1480,16 @@ local function attach_autocmds(session, tabpage)
       end
     end,
   })
-  -- DiffviewViewClosed carries no payload saying which view closed, so check
-  -- whether ours is still registered before tearing the session down.
+  -- DiffviewViewClosed carries no payload saying which view closed. Testing
+  -- lib.views membership does not work: View:close() tabcloses and emits but
+  -- leaves the view registered (only the scheduled dispose_stray_views
+  -- removes it). The tabpage is already gone by emit time, so its validity
+  -- is the reliable signal that the view that closed was ours.
   api.nvim_create_autocmd('User', {
     group = group,
     pattern = 'DiffviewViewClosed',
     callback = function()
-      local ok, lib = pcall(require, 'diffview.lib')
-      if ok and lib.views and vim.tbl_contains(lib.views, session.view) then
+      if api.nvim_tabpage_is_valid(tabpage) then
         return
       end
 
