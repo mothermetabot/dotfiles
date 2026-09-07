@@ -11,17 +11,27 @@
 
 local READ = { 'BufReadPre', 'BufNewFile' }
 
+-- Real code/text filetypes. Used to trigger plugins that should only run on
+-- editable buffers, never on oil / special buffers (whose filetype isn't here).
+local CODE_FT = {
+  'lua', 'python', 'rust', 'c', 'cpp', 'cs', 'java', 'go', 'ruby', 'php',
+  'javascript', 'javascriptreact', 'typescript', 'typescriptreact',
+  'html', 'css', 'scss', 'json', 'jsonc', 'yaml', 'toml', 'xml', 'sql',
+  'markdown', 'text', 'sh', 'bash', 'zsh', 'vim', 'dockerfile', 'make',
+  'gitcommit', 'razor',
+}
+
 return {
   -----------------------------------------------------------------------------
-  -- Colorschemes (eager: one is applied at startup; the rest just need to be
-  -- on 'runtimepath' so :RndColor / :Cmain can switch to them).
+  -- Colorscheme. Applied on VimEnter (just after first paint) rather than
+  -- eagerly, to keep its highlight-group sourcing off the critical startup
+  -- path. Trade-off is a brief flash of default colors on the very first frame.
   -----------------------------------------------------------------------------
-  -- Alternate schemes: installed + on 'runtimepath' so :RndColor / :Cmain can
-  -- switch to them, but never sourced at startup.
   {
-    src = 'vague2k/vague.nvim',
+    src = 'rebelot/kanagawa.nvim',
+    event = 'VimEnter',
     config = function()
-      vim.cmd.colorscheme 'vague'
+      vim.cmd.colorscheme 'kanagawa'
     end,
   },
 
@@ -50,7 +60,108 @@ return {
       end
     end,
   },
-
+  -----------------------------------------------------------------------------
+  -- Git diff viewer. No devicons dep: mini.icons (eager, above) already mocks
+  -- nvim-web-devicons. `q` closes the whole view from any of its windows.
+  -- Works from oil too: diffview only uses the buffer path as a repo
+  -- indicator for buftype == "" buffers, so in oil it resolves from the cwd.
+  -----------------------------------------------------------------------------
+  {
+    src = 'sindrets/diffview.nvim',
+    cmd = {
+      'DiffviewOpen',
+      'DiffviewClose',
+      'DiffviewToggleFiles',
+      'DiffviewFileHistory',
+    },
+    keys = { '<leader>gd', '<leader>gD', '<leader>gh' },
+    config = function()
+      local close = { 'n', 'q', '<cmd>DiffviewClose<cr>', { desc = 'Close Diffview' } }
+      local details = {
+        'n',
+        '<leader>rd',
+        function()
+          require('gg_pr').details()
+        end,
+        { desc = 'Review PR details' },
+      }
+      -- Visual: comment on the selection. Normal: on the cursor line in a
+      -- diff pane, or on the whole file when in the file panel.
+      local comment = {
+        'x',
+        '<leader>rc',
+        function()
+          require('gg_pr').comment()
+        end,
+        { desc = 'Review comment on selection' },
+      }
+      local comment_line = {
+        'n',
+        '<leader>rc',
+        function()
+          require('gg_pr').comment()
+        end,
+        { desc = 'Review comment on line/file' },
+      }
+      local page = {
+        'n',
+        '<leader>rp',
+        function()
+          require('gg_pr').page()
+        end,
+        { desc = 'Review PR conversation' },
+      }
+      local help = {
+        'n',
+        '<leader>rh',
+        function()
+          require('gg_pr').help()
+        end,
+        { desc = 'Review keys and commands' },
+      }
+      local thread = {
+        'n',
+        '<leader>rt',
+        function()
+          require('gg_pr').thread()
+        end,
+        { desc = 'Review comment thread under cursor' },
+      }
+      local vote = {
+        'n',
+        '<leader>rv',
+        function()
+          require('gg_pr').vote()
+        end,
+        { desc = 'Review vote on PR' },
+      }
+      local refresh = {
+        'n',
+        '<leader>rr',
+        function()
+          require('gg_pr').refresh()
+        end,
+        { desc = 'Review reload PR threads' },
+      }
+      require('diffview').setup {
+        keymaps = {
+          view = { close, details, comment, comment_line, thread, vote, refresh, page, help },
+          file_panel = { close, details, comment_line, thread, vote, refresh, page, help },
+          file_history_panel = { close },
+        },
+      }
+      vim.keymap.set('n', '<leader>gd', '<cmd>DiffviewOpen<cr>', { desc = 'Git changes' })
+      vim.keymap.set('n', '<leader>gD', '<cmd>DiffviewOpen --staged<cr>', { desc = 'Git staged changes' })
+      vim.keymap.set('n', '<leader>gh', function()
+        -- File history for real files; repo history from oil/special buffers.
+        if vim.bo.buftype == '' and vim.api.nvim_buf_get_name(0) ~= '' then
+          vim.cmd 'DiffviewFileHistory %'
+        else
+          vim.cmd 'DiffviewFileHistory'
+        end
+      end, { desc = 'Git file history' })
+    end,
+  },
   -----------------------------------------------------------------------------
   -- File explorer
   -----------------------------------------------------------------------------
@@ -59,7 +170,6 @@ return {
     cmd = 'Oil',
     config = function()
       require('oil').setup {
-        default_file_explorer = true,
         columns = { 'icon', 'mtime' },
         view_options = {
           show_hidden = true,
@@ -191,9 +301,11 @@ return {
   -- LSP (native vim.lsp, no Mason) + formatting
   -----------------------------------------------------------------------------
   {
+    -- No blink.cmp dep: lsp.lua pulls blink's capabilities via a plain
+    -- require (packadd! keeps its lua/ on rtp), so the full completion stack
+    -- (blink + LuaSnip + lazydev) stays deferred until InsertEnter.
     src = 'neovim/nvim-lspconfig',
     event = READ,
-    deps = { 'saghen/blink.cmp' }, -- ensure blink caps are ready when servers configure
     config = function()
       require('lsp').setup()
     end,
@@ -242,6 +354,51 @@ return {
     end,
     config = function()
       require('treesitter').setup()
+    end,
+  },
+
+  -----------------------------------------------------------------------------
+  -- Markdown preview (:MarkdownPreview) — loads on markdown buffers
+  -----------------------------------------------------------------------------
+  {
+    src = 'iamcco/markdown-preview.nvim',
+    ft = 'markdown',
+    -- Downloads the prebuilt preview-server binary into app/bin. Doesn't use
+    -- mkdp#util#install() (passes a bare "install.cmd ..." string to 'shell' =
+    -- PowerShell, which can't resolve it) nor install.cmd itself (its
+    -- Invoke-WebRequest dies in console-less processes yet still reports
+    -- success, leaving app/bin empty).
+    build = function()
+      local root = vim.fs.joinpath(vim.fn.stdpath 'data', 'site', 'pack', 'core', 'opt', 'markdown-preview.nvim')
+      local app = vim.fs.joinpath(root, 'app')
+      -- Release tag lives in the ROOT package.json (0.0.10); app/package.json
+      -- holds an unrelated stale version (0.0.1) with no matching release.
+      local version = 'v' .. vim.json.decode(table.concat(vim.fn.readfile(vim.fs.joinpath(root, 'package.json')))).version
+      if vim.fn.has 'win32' == 0 then
+        local out = vim.system({ 'sh', vim.fs.joinpath(app, 'install.sh'), version }, { cwd = app }):wait()
+        if out.code ~= 0 then
+          vim.notify('markdown-preview: install.sh failed\n' .. (out.stderr or ''), vim.log.levels.ERROR)
+        end
+        return
+      end
+      local url = ('https://github.com/iamcco/markdown-preview.nvim/releases/download/%s/markdown-preview-win.zip'):format(version)
+      local zip = vim.fs.joinpath(app, 'markdown-preview-win.zip')
+      local bin = vim.fs.joinpath(app, 'bin')
+      vim.fn.mkdir(bin, 'p')
+      for _, cmd in ipairs {
+        { 'curl.exe', '-fsSL', url, '-o', zip },
+        { 'tar.exe', '-xf', zip, '-C', bin },
+      } do
+        local out = vim.system(cmd, { cwd = app }):wait()
+        if out.code ~= 0 then
+          vim.notify(('markdown-preview: install failed at `%s`\n%s'):format(cmd[1], out.stderr or ''), vim.log.levels.ERROR)
+          return
+        end
+      end
+      vim.fn.delete(zip)
+      if vim.fn.executable(vim.fs.joinpath(bin, 'markdown-preview-win.exe')) ~= 1 then
+        vim.notify('markdown-preview: server binary missing after install', vim.log.levels.ERROR)
+      end
     end,
   },
 
@@ -328,6 +485,18 @@ return {
   },
 
   -----------------------------------------------------------------------------
+  -- Utilities
+  -----------------------------------------------------------------------------
+  {
+    -- :StartupTime — averaged, interactive startup profiler. Lazy via cmd: the
+    -- loader defers registration past Nvim's load-plugins phase, so this
+    -- plugin/ file isn't sourced at startup. g:loaded_startuptime stays unset
+    -- until the cmd-stub fires :packadd, which then defines the real command.
+    src = 'dstein64/vim-startuptime',
+    cmd = 'StartupTime',
+  },
+
+  -----------------------------------------------------------------------------
   -- Debugging (nvim-dap, no Mason)
   -----------------------------------------------------------------------------
   {
@@ -346,15 +515,17 @@ return {
   -----------------------------------------------------------------------------
   -- Disabled by default — flip enabled = true to use (loads lazily on trigger).
   -----------------------------------------------------------------------------
-  -- Eager (no trigger) so its VimEnter autocmd is registered before VimEnter
-  -- fires; it then centers the buffer on startup. <leader>mm toggles it.
+  -- Loads only on a code/text filetype (never oil / special buffers), then
+  -- auto-centers. <leader>mm toggles it (also works before any file is opened).
   {
     src = 'shortcuts/no-neck-pain.nvim',
     enabled = true,
+    ft = CODE_FT,
+    keys = { '<leader>mm' },
     config = function()
       require('no-neck-pain').setup {
         width = 145,
-        autocmds = { enableOnVimEnter = true },
+        autocmds = { enableOnVimEnter = false },
         mappings = {
           enabled = true,
           toggle = '<Leader>mm',
@@ -365,6 +536,25 @@ return {
           scratchPad = '<Leader>ms',
         },
       }
+
+      -- Auto-center on code/text buffers. The loader re-fires FileType for the
+      -- buffer that triggered loading, so this also catches the first file.
+      vim.api.nvim_create_autocmd('FileType', {
+        pattern = CODE_FT,
+        group = vim.api.nvim_create_augroup('user-nnp-autocenter', { clear = true }),
+        callback = function()
+          -- Deferred: enabling creates side windows and switches buffers,
+          -- which must not happen inside the FileType autocmd chain — it
+          -- corrupts the runtime ftplugin undo state (E31) and the resulting
+          -- error aborts filetype detection for the triggering buffer.
+          vim.schedule(function()
+            local nnp = require 'no-neck-pain'
+            if not (nnp.state and nnp.state.enabled) then
+              nnp.enable()
+            end
+          end)
+        end,
+      })
     end,
-  }
+  },
 }

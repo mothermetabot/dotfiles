@@ -63,7 +63,15 @@ function M.setup()
     end,
   })
   -- The autocmd above won't fire for the buffer that triggered this load.
-  pcall(vim.treesitter.start)
+  -- Guard on filetype: with no filetype (eager setup at startup, before the
+  -- first file is edited) vim.treesitter.start() can't succeed, but its
+  -- language lookup calls vim.filetype.match({buf}), which force-loads the
+  -- still-unloaded arglist buffer DURING init — before the filetypedetect
+  -- autocmds exist. The buffer then never gets re-read, so no FileType event
+  -- ever fires for the first file and every ft-triggered plugin stays dormant.
+  if vim.bo.filetype ~= '' then
+    pcall(vim.treesitter.start)
+  end
 
   -- Install missing extra parsers after startup (install() is async itself,
   -- but the toolchain check + get_installed read are deferred anyway).

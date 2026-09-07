@@ -129,6 +129,11 @@ function M.setup()
   setup_diagnostics()
 
   local capabilities = {}
+  -- blink.cmp itself lazy-loads on InsertEnter; we only need its lua/ dir on
+  -- 'runtimepath' to read capabilities. packadd! adds it without sourcing
+  -- plugin/ files, covering the first-file-at-startup case where the loader's
+  -- deferred vim.pack.add hasn't run yet.
+  pcall(vim.cmd, 'packadd! blink.cmp')
   local ok, blink = pcall(require, 'blink.cmp')
   if ok then
     capabilities = blink.get_lsp_capabilities()

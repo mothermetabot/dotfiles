@@ -63,7 +63,22 @@ local function realize(spec)
   for _, dep in ipairs(spec.deps) do
     realize(dep)
   end
-  pcall(vim.cmd.packadd, spec.name)
+  local ok = pcall(vim.cmd.packadd, spec.name)
+  if not ok then
+    -- A trigger can fire before the deferred vim.pack.add has installed the
+    -- plugin (e.g. `nvim new-plugin-trigger.md` on first run after adding a
+    -- spec). Install it synchronously and retry.
+    pcall(vim.pack.add, { { src = spec.src, name = spec.name, version = spec.version } }, { load = false, confirm = false })
+    ok = pcall(vim.cmd.packadd, spec.name)
+  end
+  if not ok then
+    -- Un-mark so another trigger (cmd/keys) can retry; report instead of
+    -- failing silently — a consumed once-autocmd would otherwise leave the
+    -- plugin unloadable for the rest of the session with no hint why.
+    spec._loaded = false
+    vim.notify(('[loader] %s: packadd failed — plugin missing from packpath and install failed'):format(spec.name), vim.log.levels.ERROR)
+    return
+  end
   if type(spec.config) == 'function' then
     local ok, err = pcall(spec.config)
     if not ok then
@@ -107,11 +122,37 @@ local function wire(spec)
     vim.api.nvim_create_autocmd('FileType', {
       pattern = as_list(spec.ft),
       once = true,
-      callback = function()
+      callback = function(ev)
         realize(spec)
         -- Re-emit FileType so handlers the plugin just registered apply to
-        -- the buffer that triggered the load.
-        vim.api.nvim_exec_autocmds('FileType', { buffer = 0, modeline = false })
+        -- the buffer that triggered the load. Deferred, NOT inline: re-running
+        -- the chain nested inside the still-executing FileType chain makes the
+        -- runtime ftplugin loader run its undo_ftplugin against stale state
+        -- (E31), and that error aborts filetype detection for the buffer.
+        -- The buffer-local flag dedupes re-emits when several specs trigger
+        -- on the same FileType event.
+        if vim.b[ev.buf]._loader_ft_refire then
+          return
+        end
+        vim.b[ev.buf]._loader_ft_refire = true
+        vim.schedule(function()
+          if not vim.api.nvim_buf_is_valid(ev.buf) then
+            return
+          end
+          vim.b[ev.buf]._loader_ft_refire = nil
+          -- Skip if the filetype changed since scheduling (plugin UIs like
+          -- diffview repurpose buffers between the event and this tick), and
+          -- re-emit with the buffer as current: ftplugins read the CURRENT
+          -- buffer's options, so firing from another window runs them
+          -- against the wrong buffer (e.g. markdown.lua starting treesitter
+          -- for a 'DiffviewFiles' panel).
+          if vim.bo[ev.buf].filetype ~= ev.match then
+            return
+          end
+          vim.api.nvim_buf_call(ev.buf, function()
+            vim.api.nvim_exec_autocmds('FileType', { buffer = ev.buf, modeline = false })
+          end)
+        end)
       end,
     })
   end
@@ -180,29 +221,62 @@ function M.setup(specs)
     registry[spec.name] = spec
   end
 
-  -- Flatten active specs + their deps into a single install list (deduped).
-  local install, seen = {}, {}
-  local function collect(spec)
+  local function is_eager(spec)
+    return not (spec.event or spec.ft or spec.cmd or spec.keys or spec.install_only)
+  end
+
+  -- Flatten specs + their deps into install lists (deduped across both lists).
+  local seen = {}
+  local function collect(spec, list)
     spec = registry[spec.name] or spec
     registry[spec.name] = spec
     if not seen[spec.name] then
       seen[spec.name] = true
-      install[#install + 1] = { src = spec.src, name = spec.name, version = spec.version }
+      list[#list + 1] = { src = spec.src, name = spec.name, version = spec.version }
     end
     for _, dep in ipairs(spec.deps) do
-      collect(dep)
+      collect(dep, list)
+    end
+  end
+
+  -- Eager plugins (no trigger) are collected first so shared deps land in the
+  -- eager list and get sourced at startup alongside their dependent.
+  local eager_install, deferred_install = {}, {}
+  for _, spec in ipairs(active) do
+    if is_eager(spec) then
+      collect(spec, eager_install)
     end
   end
   for _, spec in ipairs(active) do
-    collect(spec)
+    if not is_eager(spec) then
+      collect(spec, deferred_install)
+    end
   end
 
-  -- Install anything missing (no-op + offline when already on disk), source
-  -- nothing (load = false), and don't prompt on first bootstrap (confirm = false).
-  pcall(vim.pack.add, install, { load = false, confirm = false })
-
+  -- Eager: install + add to 'runtimepath' now, then source via wire/realize.
+  if #eager_install > 0 then
+    pcall(vim.pack.add, eager_install, { load = false, confirm = false })
+  end
   for _, spec in ipairs(active) do
-    wire(spec)
+    if is_eager(spec) then
+      wire(spec)
+    end
+  end
+
+  -- Lazy / install_only: register with vim.pack AFTER init.lua, so they miss
+  -- Nvim's post-init "load rtp plugins" phase and their plugin/ files are NOT
+  -- sourced at startup. They're put on 'runtimepath' (load = false), then
+  -- sourced only when a trigger fires (realize -> :packadd). vim.schedule runs
+  -- on the next loop tick — before any user-driven trigger can fire.
+  for _, spec in ipairs(active) do
+    if not is_eager(spec) then
+      wire(spec)
+    end
+  end
+  if #deferred_install > 0 then
+    vim.schedule(function()
+      pcall(vim.pack.add, deferred_install, { load = false, confirm = false })
+    end)
   end
 end
 

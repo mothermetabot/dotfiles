@@ -1,3 +1,6 @@
+-- Byte-compile + cache Lua modules; avoids a full runtimepath scan per require.
+vim.loader.enable()
+
 -- Options, autocmds and keymaps.
 local config = require 'config'
 config.opts()

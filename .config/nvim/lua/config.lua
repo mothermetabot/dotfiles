@@ -1,5 +1,26 @@
 return {
   opts = function()
+    -- Disable built-in runtime plugins / providers we don't use. Must run
+    -- before Nvim's post-init load-plugins phase, so it lives here in opts().
+    -- netrw is replaced by oil; the rest are archive/tutor/remote scaffolding.
+    vim.g.loaded_netrw = 1
+    vim.g.loaded_netrwPlugin = 1
+    vim.g.loaded_tar = 1
+    vim.g.loaded_tarPlugin = 1
+    vim.g.loaded_zip = 1
+    vim.g.loaded_zipPlugin = 1
+    vim.g.loaded_gzip = 1
+    vim.g.loaded_tutor_mode_plugin = 1
+    vim.g.loaded_2html_plugin = 1
+    vim.g.loaded_python3_provider = 0
+    vim.g.loaded_ruby_provider = 0
+    vim.g.loaded_perl_provider = 0
+    vim.g.loaded_node_provider = 0
+
+    -- NOTE: 'clipboard=unnamedplus' is intentionally NOT set: on Windows every
+    -- yank/delete/change would spawn win32yank.exe (~50ms). Use <leader>y/p
+    -- (see keymaps) to talk to the system clipboard explicitly.
+
     --Change windows shell to use bash
     vim.o.shell = 'powershell.exe'
     vim.opt.shellcmdflag = '-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command'
@@ -57,6 +78,34 @@ return {
       vim.cmd 'write'
     end
 
+    -- This command changes the cwd to the current buffer or path (oil)
+    vim.api.nvim_create_user_command("D", function()
+      local dir
+
+      if vim.bo.filetype == "oil" then
+        dir = require("oil").get_current_dir()
+      else
+        local file = vim.api.nvim_buf_get_name(0)
+
+        if file == "" then
+          vim.notify("Current buffer has no file path", vim.log.levels.WARN)
+          return
+        end
+
+        dir = vim.fs.dirname(file)
+      end
+
+      if not dir then
+        vim.notify("Could not determine directory", vim.log.levels.ERROR)
+        return
+      end
+
+      vim.api.nvim_set_current_dir(dir)
+      vim.notify("Working directory: " .. dir)
+    end, {
+      desc = "Set working directory to Oil or buffer directory",
+    })
+
     vim.api.nvim_create_user_command('Normalize', normalize_dos, {})
     vim.api.nvim_create_user_command('N', normalize_dos, {})
 
@@ -84,10 +133,21 @@ return {
     vim.keymap.set('n', '<C-j>', '<C-w><C-j>', { desc = 'Move focus to the lower window' })
     vim.keymap.set('n', '<C-k>', '<C-w><C-k>', { desc = 'Move focus to the upper window' })
 
-    vim.keymap.set('n', '<leader>y', '+y', { desc = 'Copy to system clipboard' })
-    vim.keymap.set('v', '<leader>y', '+y', { desc = 'Copy to system clipboard' })
-    vim.keymap.set('n', '<leader>p', '+p', { desc = 'Paste from system clipboard' })
-    vim.keymap.set('v', '<leader>p', '+p', { desc = 'Paste from system clipboard' })
+    vim.keymap.set({ 'n', 'v' }, '<leader>y', '"+y', { desc = 'Copy to system clipboard' })
+    vim.keymap.set({ 'n', 'v' }, '<leader>p', '"+p', { desc = 'Paste from system clipboard' })
+
+    -- Copying keymaps
+    vim.keymap.set('n', '<localleader>yp', function() 
+      vim.fn.setreg('+', vim.fn.expand('%:p:.')) 
+    end, { desc = 'Copy file path' })
+
+    vim.keymap.set('n', '<localleader>yd', function() 
+      vim.fn.setreg('+', vim.fn.expand('%:h')) 
+    end, { desc = 'Copy directory path' })
+
+    vim.keymap.set('n', '<localleader>yf', function() 
+      vim.fn.setreg('+', vim.fn.expand('%:t:r')) 
+    end, { desc = 'Copy file name' })
 
     -- opens lazygit in a new terminal split
     local function open_lazygit()

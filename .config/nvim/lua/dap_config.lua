@@ -85,6 +85,16 @@ end
 function M.setup()
   local dap = require 'dap'
   local dapui = require 'dapui'
+dap.configurations.cs = {
+  {
+    type = "coreclr",
+    name = "launch - netcoredbg",
+    request = "launch",
+    program = function()
+        return vim.fn.input('Path to dll', vim.fn.getcwd() .. '/bin/Debug/', 'file')
+    end,
+  },
+}
 
   dapui.setup {
     icons = { expanded = 'v', collapsed = '>', current_frame = '*' },
