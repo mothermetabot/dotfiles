@@ -66,6 +66,7 @@ call :install_scoop_pkg "aria2" || (set "rc=!errorlevel!" & call :die !rc! "Fail
 call :install_scoop_pkg "fzf" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (fzf).")
 call :install_scoop_pkg "ripgrep" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (ripgrep).")
 call :install_scoop_pkg "uv" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (uv).")
+call :install_scoop_pkg "mdcat" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (mdcat).")
 call :install_scoop_pkg "neovim" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (neovim).")
 call :install_scoop_pkg "starship" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (starship).")
 call :install_scoop_pkg "lazygit" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (lazygit).")
