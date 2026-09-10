@@ -24,79 +24,18 @@ function ll {
 }
 
 # GIT quality of life functions
-# --- gl: pretty, minimal git log ---
-function gl {
-    [CmdletBinding()]
-    param(
-        [Parameter(ValueFromRemainingArguments = $true)]
-        [string[]] $Branches
-    )
-
-    # If no branches are provided, default to the current branch (HEAD)
-    $rev = if ($Branches -and $Branches.Count -gt 0) { $Branches } else { @("HEAD") }
-
-    git --no-pager log `
-        --graph `
-        --decorate=short `
-        --date=short `
-        --pretty=format:"%C(auto)%h%d %s %C(black)%C(bold)%ad %C(blue)%an%Creset" `
-        --max-count=30 `
-        @rev
+# --- gg: interactive git helper (branch, changes, stash, worktree, PR, log, undo) ---
+# The implementation lives in an optional PowerShell module rather than in
+# this profile. Source and tests: %USERPROFILE%\home\src\gg (see its README).
+# The module exports gg, gl, gs and ga and registers their argument completers
+# on import; all __gg_* helpers stay private to it. The module is optional: if
+# the repository is absent this block does nothing and the profile is otherwise
+# unaffected, so gg/gl/gs/ga are simply undefined.
+$ggModulePath = Join-Path $env:USERPROFILE 'home\src\gg\GG.psd1'
+if (Test-Path -LiteralPath $ggModulePath) {
+    Import-Module $ggModulePath
 }
-
-function gs {
-    param(
-        [Parameter(Position = 0)]
-        [string]$Path
-    )
-
-    if ($PSBoundParameters.ContainsKey('Path')) {
-        git status -s -- "$Path"
-    }
-    else {
-        git status -s
-    }
-}
-
-# navigate upwards to repo root and run git add .
-function ga {
-    $repoRoot = git rev-parse --show-toplevel 2>$null
-
-    if (-not $repoRoot) {
-        Write-Error "Not inside a git repository."
-        return
-    }
-
-    Push-Location $repoRoot
-    try {
-        git add .
-    }
-    finally {
-        Pop-Location
-    }
-}
-
-# --- autocomplete git branch names for: gl <branch...> ---
-Register-ArgumentCompleter -CommandName gl -ParameterName Branches -ScriptBlock {
-    param($commandName, $parameterName, $wordToComplete, $commandAst, $fakeBoundParameters)
-
-    # Only offer completions when we're inside a git repo
-    git rev-parse --is-inside-work-tree 2>$null | Out-Null
-    if ($LASTEXITCODE -ne 0) { return }
-
-    # List local + remote branches, strip prefixes, uniq, then filter by what user typed
-    $branches =
-        git for-each-ref --format='%(refname:short)' refs/heads refs/remotes 2>$null |
-        ForEach-Object { $_.Trim() } |
-        Where-Object { $_ -and $_ -ne 'HEAD' } |
-        Sort-Object -Unique
-
-    foreach ($b in $branches) {
-        if ($b -like "$wordToComplete*") {
-            [System.Management.Automation.CompletionResult]::new($b, $b, 'ParameterValue', $b)
-        }
-    }
-}
+Remove-Variable ggModulePath -ErrorAction SilentlyContinue
 
 function envup {
     param(
@@ -134,6 +73,7 @@ function envup {
 Invoke-Expression (&starship init powershell)
 If (Test-Path Alias:rm) {Remove-Item Alias:rm}
 If (Test-Path Alias:ls) {Remove-Item Alias:ls}
+If (Test-Path Alias:gl) {Remove-Item Alias:gl -Force}
 
 # =============================================================================
 #
@@ -277,4 +217,190 @@ if (-not (Get-Module -ListAvailable -Name posh-git)) {
   }
   Import-Module posh-git
 
+# --- gp: fuzzy-find with paths (fd --type d) and cd to the selection ---
+function cb {
+    $selection =   fd --type d | fzf
+    if (-not $selection) { return }  # cancelled with Esc/Ctrl+C
 
+    Set-Location -LiteralPath $selection
+}
+
+
+# --- gn: fuzzy-find with nodes (files) and cd to the selection ---
+function cl {
+    $selection =    fzf 
+    if (-not $selection) { return }  # cancelled with Esc/Ctrl+C
+
+    Set-Location -LiteralPath (Split-Path -Parent $selection)
+}
+
+function n {
+    nvim .
+}
+
+function fvim {
+    $selection = rg --files --hidden --glob '!.git/*' | fzf
+
+    if (-not $selection) { return }
+
+    nvim $selection
+}
+
+function gvim {
+    $selection = fzf `
+        --ansi `
+        --disabled `
+        --prompt "grep> " `
+        --with-shell "powershell.exe -NoProfile -Command" `
+        --bind "change:reload:rg --column --line-number --no-heading --color=always --smart-case --hidden --glob '!.git/*' {q}; if (`$LASTEXITCODE -eq 1) { exit 0 }" `
+        --bind "result:transform-list-label:if (`$env:FZF_MATCH_COUNT -eq 0) { ' No matches ' } else { ' ' + `$env:FZF_MATCH_COUNT + ' matches ' }" `
+        --delimiter ":"
+
+    if (-not $selection) { return }
+
+    if ($selection -match '^(.*):(\d+):(\d+):(.*)$') {
+        $file = $matches[1]
+        $line = $matches[2]
+        $column = $matches[3]
+
+        nvim "+call cursor($line,$column)" -- $file
+    }
+}
+
+function dev {
+    param(
+        [Parameter(Position = 0)]
+        [string] $Action
+    )
+
+    function Show-DevHelp {
+        @"
+Usage:
+  dev on       Load the Visual Studio developer environment
+  dev off      Unload it and restore the previous environment
+  dev --help   Show this help
+"@
+    }
+
+    # "dev" behaves like "dev --help", but isn't shown separately in help.
+    if (-not $Action -or $Action -in @("--help", "-h", "help")) {
+        Show-DevHelp
+        return
+    }
+
+    switch ($Action.ToLowerInvariant()) {
+        "on" {
+            if ($script:DevEnvironmentActive) {
+                Write-Host "Visual Studio developer environment is already loaded."
+                return
+            }
+
+            $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+
+            if (-not (Test-Path $vswhere)) {
+                Write-Error "Could not find vswhere.exe."
+                return
+            }
+
+            $installPath = & $vswhere `
+                -latest `
+                -products * `
+                -property installationPath
+
+            if (-not $installPath) {
+                Write-Error "Could not find a Visual Studio installation."
+                return
+            }
+
+            $devShell = Join-Path `
+                $installPath `
+                "Common7\Tools\Launch-VsDevShell.ps1"
+
+            if (-not (Test-Path $devShell)) {
+                Write-Error "Could not find Launch-VsDevShell.ps1."
+                return
+            }
+
+            # Save the environment before enabling the VS developer shell.
+            $before = @{}
+
+            Get-ChildItem Env: | ForEach-Object {
+                $before[$_.Name] = $_.Value
+            }
+
+            try {
+                & $devShell `
+                    -SkipAutomaticLocation `
+                    -Arch amd64 `
+                    -HostArch amd64 `
+                    | Out-Null
+            }
+            catch {
+                Write-Error "Failed to load Visual Studio developer environment: $_"
+                return
+            }
+
+            # Determine exactly what Visual Studio changed.
+            $after = @{}
+
+            Get-ChildItem Env: | ForEach-Object {
+                $after[$_.Name] = $_.Value
+            }
+
+            $script:DevEnvironmentBackup = @{}
+
+            $names = @($before.Keys) + @($after.Keys) |
+                Sort-Object -Unique
+
+            foreach ($name in $names) {
+                $hadBefore = $before.ContainsKey($name)
+                $hasAfter  = $after.ContainsKey($name)
+
+                $oldValue = if ($hadBefore) { $before[$name] } else { $null }
+                $newValue = if ($hasAfter)  { $after[$name] } else { $null }
+
+                if (
+                    $hadBefore -ne $hasAfter -or
+                    $oldValue -ne $newValue
+                ) {
+                    $script:DevEnvironmentBackup[$name] = @{
+                        Existed = $hadBefore
+                        Value   = $oldValue
+                    }
+                }
+            }
+
+            $script:DevEnvironmentActive = $true
+
+            Write-Host "Visual Studio developer environment loaded."
+        }
+
+        "off" {
+            if (-not $script:DevEnvironmentActive) {
+                Write-Host "Visual Studio developer environment is not loaded."
+                return
+            }
+
+            foreach ($name in $script:DevEnvironmentBackup.Keys) {
+                $original = $script:DevEnvironmentBackup[$name]
+
+                if ($original.Existed) {
+                    Set-Item "Env:$name" $original.Value
+                }
+                else {
+                    Remove-Item "Env:$name" -ErrorAction SilentlyContinue
+                }
+            }
+
+            $script:DevEnvironmentBackup = $null
+            $script:DevEnvironmentActive = $false
+
+            Write-Host "Visual Studio developer environment unloaded."
+        }
+
+        default {
+            Write-Error "Unknown command '$Action'."
+            Show-DevHelp
+        }
+    }
+}
