@@ -167,18 +167,44 @@ if ($Repo -like "$Target\*" -and $Repo -notlike "$Target\home\*") {
     Write-Warn "repo lives under the deploy target; junction loops are possible"
 }
 
-# ~/.gitconfig shadows $XDG_CONFIG_HOME/git/config unconditionally, so it has to
-# go or the tracked config is silently ignored. Move rather than delete: the
-# live copy carries a credential-helper path that is not in the repo.
-$LegacyGitconfig = if ($env:HOME) { Join-Path $env:HOME '.gitconfig' } else { $null }
-if ($LegacyGitconfig -and (Test-Path -LiteralPath $LegacyGitconfig)) {
-    $bak = "$LegacyGitconfig.pre-dotfiles"
-    if ($DryRun) {
-        Write-Plan "would move $LegacyGitconfig -> $bak (it shadows the XDG git config)"
-    } else {
-        Move-Item -LiteralPath $LegacyGitconfig -Destination $bak -Force
-        Write-Do "moved $LegacyGitconfig -> $bak"
+# git finds the tracked config through XDG_CONFIG_HOME, but only for processes
+# that inherited that variable. Anything started without it - an older session,
+# a GUI tool launched from Explorer - would silently lose the identity and
+# aliases entirely.
+#
+# So rather than just moving the legacy ~/.gitconfig out of the way, replace it
+# with a two-line include. git always reads $HOME/.gitconfig regardless of XDG,
+# which makes the config reachable both ways. Same stub pattern as $PROFILE.
+$GitconfigStub = @"
+# Managed by dotfiles ($Repo). Do not edit - edit the repo file instead.
+# Present so git resolves the config even when XDG_CONFIG_HOME is not set.
+[include]
+	path = $($Repo -replace '\\', '/')/.config/git/config
+"@
+
+foreach ($home_ in @($env:HOME, $Target) | Where-Object { $_ } | Sort-Object -Unique) {
+    $gc  = Join-Path $home_ '.gitconfig'
+    $cur = if (Test-Path -LiteralPath $gc) { Get-Content -LiteralPath $gc -Raw } else { $null }
+
+    if ($null -ne $cur -and $cur.Trim() -eq $GitconfigStub.Trim()) { Write-Skip $gc; continue }
+
+    # A real pre-existing config carries settings that are not in the repo yet
+    # (credential helpers, machine paths). Never clobber it silently.
+    if ($null -ne $cur -and $cur -notmatch 'Managed by dotfiles') {
+        $bak = "$gc.pre-dotfiles"
+        if ($DryRun) {
+            Write-Plan "would back up $gc -> $bak, then write include stub"
+            continue
+        }
+        Move-Item -LiteralPath $gc -Destination $bak -Force
+        Write-Do "backed up $gc -> $bak"
+    } elseif ($DryRun) {
+        Write-Plan "would write git include stub to $gc"
+        continue
     }
+
+    Set-Content -LiteralPath $gc -Value $GitconfigStub -Encoding ascii
+    Write-Do "git include stub -> $gc"
 }
 
 # =============================================================================
@@ -359,6 +385,32 @@ foreach ($p in $ProfileStubs) {
     if (Test-Path -LiteralPath $p) { Remove-Item -LiteralPath $p -Force }
     Set-Content -LiteralPath $p -Value $stubBody -Encoding utf8
     Write-Do "stub -> $p"
+}
+
+# =============================================================================
+# 5b. tmux plugin tail
+# =============================================================================
+
+Write-Head '[5b] tmux plugin tail'
+
+# tmux.conf is shared with Linux; only the plugin manager differs. Selecting it
+# by copying the right file means tmux.conf needs no if-shell, which matters
+# because psmux may not implement it.
+$tmuxPlugins = "$Repo\.config\tmux\plugins.conf"
+$tmuxSource  = "$Repo\.config\tmux\plugins.windows.conf"
+if (-not (Test-Path -LiteralPath $tmuxSource)) {
+    Write-Warn "missing $tmuxSource"
+} else {
+    $want = Get-Content -LiteralPath $tmuxSource -Raw
+    $cur  = if (Test-Path -LiteralPath $tmuxPlugins) { Get-Content -LiteralPath $tmuxPlugins -Raw } else { $null }
+    if ($cur -eq $want) {
+        Write-Skip 'plugins.conf -> plugins.windows.conf'
+    } elseif ($DryRun) {
+        Write-Plan 'would set plugins.conf from plugins.windows.conf'
+    } else {
+        Copy-Item -LiteralPath $tmuxSource -Destination $tmuxPlugins -Force
+        Write-Do 'plugins.conf -> plugins.windows.conf'
+    }
 }
 
 # =============================================================================

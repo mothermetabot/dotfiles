@@ -1,39 +1,24 @@
-# Git Bash interactive enhancements
+# Interactive bash configuration. Linux only - Windows uses PowerShell.
+#
+# This file used to target Git Bash on Windows: it carried a `devshell`
+# function that shelled out to cmd.exe, cygpath and vcvars64.bat, and pointed
+# at a Visual Studio Enterprise path that did not match the BuildTools install
+# the bootstrap actually performed. All of that is gone; `dev` in the
+# PowerShell profile is the Windows equivalent.
 
-# Skip everything when not interactive (prevents bind warnings in scripts)
+# Skip everything when not interactive (prevents bind warnings in scripts).
 case $- in
   *i*) ;;
   *) return ;;
 esac
 
-devshell() {
-    local vcvars="C:\Program Files\Microsoft Visual Studio\2022\Enterprise\VC\Auxiliary\Build\vcvars64.bat"
-    local bash_exe=$(cygpath -w "$(which bash)")
-    local wrapper="$HOME/launch_msvc.bat"
+# --- history ------------------------------------------------------------------
+shopt -s histappend
+HISTCONTROL=ignoredups:erasedups
+HISTSIZE=5000
+HISTFILESIZE=10000
 
-    # We create a wrapper that sets the VS env, 
-    # then MANUALLY moves the VS Binaries to the front of the PATH
-    cat <<EOF > "$wrapper"
-@echo off
-call "$vcvars"
-set PATH=%VCINSTALLDIR%Tools\MSVC\%VCToolsVersion%\bin\HostX64\x64;%PATH%
-"$bash_exe" -l -i
-EOF
-
-    cmd.exe //c "$(cygpath -w "$wrapper")"
-}
-envup() {
-  if [[ -f .env ]]; then
-    set -a
-    source .env
-    set +a
-  else
-    echo "envup: no .env found in $(pwd)" >&2
-    return 1
-  fi
-}
-
-# Enable bash-completion when available (Git for Windows ships it)
+# --- completion ---------------------------------------------------------------
 if [ -z "$DISABLE_BASH_COMPLETION" ]; then
   if [ -r /usr/share/bash-completion/bash_completion ]; then
     . /usr/share/bash-completion/bash_completion
@@ -42,19 +27,14 @@ if [ -z "$DISABLE_BASH_COMPLETION" ]; then
   fi
 fi
 
-# Ctrl+n / Ctrl+p cycle completion candidates (replaces Tab cycling)
+# Ctrl+n / Ctrl+p cycle completion candidates (replaces Tab cycling).
 bind 'set show-all-if-ambiguous on'
 bind 'set menu-complete-display-prefix on'
 bind '"\C-n":menu-complete'
 bind '"\C-p":menu-complete-backward'
 
-# History quality
-shopt -s histappend
-HISTCONTROL=ignoredups:erasedups
-HISTSIZE=5000
-HISTFILESIZE=10000
-
-# Fuzzy history search with fzf when available; fall back to readline search
+# --- fuzzy history ------------------------------------------------------------
+# The PowerShell side gets this from PSFzf; bash needs it wired by hand.
 _fzf_history_widget() {
   local selected
   selected=$(
@@ -66,43 +46,57 @@ _fzf_history_widget() {
   READLINE_POINT=${#READLINE_LINE}
 }
 
-# if command -v fzf >/dev/null 2>&1; then
-#   bind -x '"\C-r": _fzf_history_widget'
-# else
-#   bind '"\C-r": reverse-search-history'
-# fi
+if command -v fzf >/dev/null 2>&1; then
+  bind -x '"\C-r": _fzf_history_widget'
+else
+  bind '"\C-r": reverse-search-history'
+fi
 
-
+# --- aliases and functions ----------------------------------------------------
 alias ll="ls -lafg --color=auto"
 
-# git pretty log function
-function gl {
+envup() {
+  local file="${1:-.env}"
+  if [[ -f "$file" ]]; then
+    set -a
+    # shellcheck disable=SC1090
+    source "$file"
+    set +a
+  else
+    echo "envup: no $file found in $(pwd)" >&2
+    return 1
+  fi
+}
+
+# gl: pretty git log. Mirrors the `gl` provided by the GG module on Windows.
+gl() {
+  local fmt='%C(bold blue)%h%C(reset) %C(bold green)%ad%C(reset)%C(red)%d%C(reset)%n  %s %C(dim white)(%an)%C(reset)'
   if [ $# -eq 0 ]; then
-    git log --graph --decorate --color --date=short \
-      --pretty=format:'%C(bold blue)%h%C(reset) %C(bold green)%ad%C(reset)%C(red)%d%C(reset)%n  %s %C(dim white)(%an)%C(reset)' \
-      --all
+    git log --graph --decorate --color --date=short --pretty=format:"$fmt" --all
   else
-    git log --graph --decorate --color --date=short \
-      --pretty=format:'%C(bold blue)%h%C(reset) %C(bold green)%ad%C(reset)%C(red)%d%C(reset)%n  %s %C(dim white)(%an)%C(reset)' \
-      "$@"
+    git log --graph --decorate --color --date=short --pretty=format:"$fmt" "$@"
   fi
 }
 
-function o() {
-  local path="${1:-}"
-  if [ -z "$path" ]; then
-    NVIM_APPNAME="nvim_oil" nvim
-  else
-    mkdir -p -- "$path"
-    cd "$path"
-    NVIM_APPNAME="nvim_oil" nvim -- "$path"
-  fi
+# Fuzzy navigation, matching the PowerShell functions of the same names.
+cb() {
+  local sel
+  sel=$(fd --type d | fzf) || return
+  [ -n "$sel" ] && cd "$sel" || return
 }
 
-alias pn="cd ~/proteus-now/"
-export CC=gcc
+fvim() {
+  local sel
+  sel=$(rg --files --hidden --glob '!.git/*' | fzf) || return
+  [ -n "$sel" ] && nvim "$sel"
+}
 
+n() { nvim .; }
 
-eval "$(starship init bash)"
+# --- prompt and navigation ----------------------------------------------------
+command -v starship >/dev/null 2>&1 && eval "$(starship init bash)"
+command -v zoxide   >/dev/null 2>&1 && eval "$(zoxide init bash --cmd c)"
 
-. "$HOME/.local/bin/env"
+# --- machine-local overrides --------------------------------------------------
+# Gitignored. Project shortcuts, proxies, credentials, uv's PATH shim.
+[ -f "$HOME/.bashrc.local" ] && . "$HOME/.bashrc.local"

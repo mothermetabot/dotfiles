@@ -17,15 +17,20 @@ return {
     vim.g.loaded_perl_provider = 0
     vim.g.loaded_node_provider = 0
 
-    -- NOTE: 'clipboard=unnamedplus' is intentionally NOT set: on Windows every
+    -- NOTE: 'clipboard=unnamedplus' is intentionally NOT set on Windows: every
     -- yank/delete/change would spawn win32yank.exe (~50ms). Use <leader>y/p
     -- (see keymaps) to talk to the system clipboard explicitly.
 
-    --Change windows shell to use bash
-    vim.o.shell = 'powershell.exe'
-    vim.opt.shellcmdflag = '-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command'
-    vim.opt.shellquote = ''
-    vim.opt.shellxquote = ''
+    -- Use PowerShell as :! and :terminal shell on Windows. On Linux the
+    -- default $SHELL is already correct, and forcing powershell.exe there
+    -- breaks every shell-out. dap_config.lua and plugins.lua already branch
+    -- on has('win32'); this block used to be the one place that did not.
+    if vim.fn.has 'win32' == 1 then
+      vim.o.shell = 'powershell.exe'
+      vim.opt.shellcmdflag = '-NoLogo -NoProfile -ExecutionPolicy RemoteSigned -Command'
+      vim.opt.shellquote = ''
+      vim.opt.shellxquote = ''
+    end
 
     vim.o.ttimeoutlen = 0
     vim.o.timeoutlen = 280

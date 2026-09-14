@@ -1,3 +1,57 @@
-[user]
-	email = mothermetabot
-	name = mothermetabot
+# Shared git configuration ($XDG_CONFIG_HOME/git/config).
+#
+# Identity, credential helpers and anything with an absolute path live in
+# config.local, which is gitignored. That keeps this file portable across
+# machines and lets one checkout serve both work and personal identities.
+
+[include]
+	path = config.local
+
+[init]
+	defaultBranch = main
+
+[core]
+	# Line endings are governed per-repo by .gitattributes rather than by a
+	# global core.autocrlf, which behaves differently on each platform. See
+	# this repo's own .gitattributes for the pattern.
+	excludesfile = ~/.config/git/ignore
+
+[push]
+	default = current
+	autoSetupRemote = true
+
+[pull]
+	rebase = true
+
+[fetch]
+	prune = true
+
+[diff]
+	algorithm = histogram
+	colorMoved = default
+
+[merge]
+	conflictstyle = zdiff3
+
+[rebase]
+	autosquash = true
+	autostash = true
+
+[branch]
+	sort = -committerdate
+
+[column]
+	ui = auto
+
+[rerere]
+	enabled = true
+
+[alias]
+	st = status --short --branch
+	co = checkout
+	br = branch
+	last = log -1 --stat
+	unstage = restore --staged
+	# Matches the `gl` function in .bashrc and the GG module on Windows.
+	lg = log --graph --decorate --date=short --all \
+	         --pretty=format:'%C(bold blue)%h%C(reset) %C(bold green)%ad%C(reset)%C(red)%d%C(reset)%n  %s %C(dim white)(%an)%C(reset)'
