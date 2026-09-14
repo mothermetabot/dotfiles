@@ -24,13 +24,6 @@ function ll {
 }
 
 # GIT quality of life functions
-# --- gg: interactive git helper (branch, changes, stash, worktree, PR, log, undo) ---
-# The implementation lives in an optional PowerShell module rather than in
-# this profile. Source and tests: %USERPROFILE%\home\src\gg (see its README).
-# The module exports gg, gl, gs and ga and registers their argument completers
-# on import; all __gg_* helpers stay private to it. The module is optional: if
-# the repository is absent this block does nothing and the profile is otherwise
-# unaffected, so gg/gl/gs/ga are simply undefined.
 $ggModulePath = Join-Path $env:USERPROFILE 'home\src\gg\GG.psd1'
 if (Test-Path -LiteralPath $ggModulePath) {
     Import-Module $ggModulePath

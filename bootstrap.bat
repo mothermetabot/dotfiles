@@ -75,7 +75,8 @@ call :install_scoop_pkg "whkd" || (set "rc=!errorlevel!" & call :die !rc! "Faile
 call :install_scoop_pkg "flameshot" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (flameshot).")
 call :install_scoop_pkg "nodejs" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (nodejs).")
 call :install_scoop_pkg "rustup" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (rustup).")
-call :install_scoop_pkg "tree-sitter" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (rustup).")
+call :install_scoop_pkg "tree-sitter" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (tree-sitter).")
+call :install_scoop_pkg "psmux" || (set "rc=!errorlevel!" & call :die !rc! "Failed during package install step (psmux).")
 
 echo Disabling aria2 warning
 call scoop config aria2-warning-enabled false
@@ -116,7 +117,7 @@ call :remove_ps_aliases || (set "rc=!errorlevel!" & call :die !rc! "Failed while
 
 call :copy_file "%DOTFILES%\.bash_profile" "%USER_HOME%\.bash_profile" || (set "rc=!errorlevel!" & call :die !rc! "Failed to copy .bash_profile")
 call :copy_file "%DOTFILES%\.gitconfig" "%USER_HOME%\.gitconfig" || (set "rc=!errorlevel!" & call :die !rc! "Failed to copy .gitconfig")
-call :copy_file "%DOTFILES%\.zshrc" "%USER_HOME%\.zshrc" || (set "rc=!errorlevel!" & call :die !rc! "Failed to copy .zshrc")
+call :copy_file "%DOTFILES%\.config\tmux" "%USER_HOME%\.config\tmux" || (set "rc=!errorlevel!" & call :die !rc! "Failed to copy tmux")
 
 call :mk_hardlink "%USER_HOME%\.bashrc" "%DOTFILES%\.bashrc" || (set "rc=!errorlevel!" & call :die !rc! "Failed to create hardlink for .bashrc")
 call :mk_hardlink "%USERPROFILE%\Documents\WindowsPowerShell\Microsoft.PowerShell_profile.ps1" "%DOTFILES%\.shell\Microsoft.PowerShell_profile.ps1" || (set "rc=!errorlevel!" & call :die !rc! "Failed to create WindowsPowerShell profile hardlink")
