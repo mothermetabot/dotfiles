@@ -18,7 +18,15 @@ bash/*          text eol=lf
 *.tsv           text eol=lf
 *.json          text eol=lf
 whkdrc          text eol=lf
-i3/*            text eol=lf
+
+# Extensionless config files. These need explicit rules: a pattern containing
+# a slash is anchored to the repo root, so `i3/*` does NOT match
+# `.config/i3/config` - which silently left these Linux-only files as CRLF.
+.config/i3/config          text eol=lf
+.config/i3status/config    text eol=lf
+.config/git/config         text eol=lf
+.config/git/ignore         text eol=lf
+.stow-local-ignore         text eol=lf
 
 # PowerShell is Windows-only and is happy either way; CRLF keeps diffs clean
 # against anything Windows tooling rewrites.
