@@ -1,0 +1,279 @@
+# i3 configuration, ported from the komorebi/whkd setup in ../../komorebi/.
+#
+# The binding layout, workspace names, gaps and colours are all taken from
+# komorebi.json and whkdrc so muscle memory carries across platforms. Where
+# komorebi has a concept i3 lacks, the nearest equivalent is used and the
+# difference is called out in a comment rather than silently dropped.
+#
+# Requires i3 >= 4.23 (for `focus next|prev`).
+
+# =============================================================================
+# Modifier
+# =============================================================================
+#
+# whkd uses Alt for everything, so Mod1 keeps the bindings identical to Windows.
+#
+# BE AWARE: Alt collides with application shortcuts far more on Linux than on
+# Windows. In particular $mod+1..8 fights browser tab switching and
+# $mod+Left/Right fights back/forward. If that becomes annoying, change this one
+# line to Mod4 (Super) - the rest of the file follows automatically. The old
+# sway config in this repo used Mod4.
+set $mod Mod1
+
+# Home row direction keys, matching whkd's alt+h/j/k/l.
+set $left  h
+set $down  j
+set $up    k
+set $right l
+
+# Terminal. Windows uses Windows Terminal, which has no Linux counterpart;
+# kitty is the placeholder - change it and `packages.tsv` together.
+set $term kitty
+
+# Launcher, carried over from the previous sway config.
+set $menu rofi -terminal '$term' -show combi -combi-modes drun#run -modes combi
+
+# =============================================================================
+# Appearance
+# =============================================================================
+
+# komorebi.json: default_workspace_padding 2, default_container_padding 1
+gaps outer 2
+gaps inner 1
+
+# komorebi.json: border true, border_width 1
+default_border pixel 1
+default_floating_border pixel 1
+hide_edge_borders smart
+
+# The bar uses JetBrains Mono on Windows, but CommitMono Nerd Font is what
+# bootstrap installs on both platforms, so use it here for consistency.
+font pango:CommitMono Nerd Font 10
+
+# --- Catppuccin Frappé, matching komorebi.json's theme -----------------------
+set $rosewater #f2d5cf
+set $flamingo  #eebebe
+set $mauve     #ca9ee6
+set $red       #e78284
+set $peach     #ef9f76
+set $yellow    #e5c890
+set $green     #a6d189
+set $blue      #8caaee
+set $lavender  #babbf1
+set $text      #c6d0f5
+set $subtext0  #a5adce
+set $overlay0  #737994
+set $surface0  #414559
+set $base      #303446
+set $mantle    #292c3c
+set $crust     #232634
+
+# class                 border     backgr.    text     indicator  child_border
+client.focused          $lavender  $base      $text    $rosewater $lavender
+client.focused_inactive $overlay0  $base      $text    $rosewater $overlay0
+client.unfocused        $surface0  $mantle    $subtext0 $rosewater $surface0
+client.urgent           $red       $base      $red     $red       $red
+client.placeholder      $overlay0  $base      $text    $overlay0  $overlay0
+client.background       $base
+
+# =============================================================================
+# Workspaces
+# =============================================================================
+#
+# Names come straight from komorebi.json's monitor[0].workspaces list. komorebi
+# is 0-indexed and i3 is 1-indexed, so alt+1 -> workspace 0 "W" becomes
+# alt+1 -> "1:W" and so on.
+#
+# NOTE: komorebi assigns a layout per workspace (Grid for W/B/M1/M2,
+# UltrawideVerticalStack for C1/C2/C3). i3 has no per-workspace default layout
+# and no Grid, so those are not reproduced. The closest manual equivalent is
+# `layout splith`/`splitv`, bound below.
+set $ws1 "1:W"
+set $ws2 "2:B"
+set $ws3 "3:C1"
+set $ws4 "4:C2"
+set $ws5 "5:C3"
+set $ws6 "6:M1"
+set $ws7 "7:M2"
+set $ws8 "8"
+
+bindsym $mod+1 workspace number $ws1
+bindsym $mod+2 workspace number $ws2
+bindsym $mod+3 workspace number $ws3
+bindsym $mod+4 workspace number $ws4
+bindsym $mod+5 workspace number $ws5
+bindsym $mod+6 workspace number $ws6
+bindsym $mod+7 workspace number $ws7
+bindsym $mod+8 workspace number $ws8
+
+# whkd: alt + shift + N : komorebic move-to-workspace
+bindsym $mod+Shift+1 move container to workspace number $ws1
+bindsym $mod+Shift+2 move container to workspace number $ws2
+bindsym $mod+Shift+3 move container to workspace number $ws3
+bindsym $mod+Shift+4 move container to workspace number $ws4
+bindsym $mod+Shift+5 move container to workspace number $ws5
+bindsym $mod+Shift+6 move container to workspace number $ws6
+bindsym $mod+Shift+7 move container to workspace number $ws7
+bindsym $mod+Shift+8 move container to workspace number $ws8
+
+# =============================================================================
+# Focus and movement
+# =============================================================================
+
+# whkd: alt + h/j/k/l : komorebic focus
+bindsym $mod+$left  focus left
+bindsym $mod+$down  focus down
+bindsym $mod+$up    focus up
+bindsym $mod+$right focus right
+
+# whkd: alt + shift + h/j/k/l : komorebic move
+bindsym $mod+Shift+$left  move left
+bindsym $mod+Shift+$down  move down
+bindsym $mod+Shift+$up    move up
+bindsym $mod+Shift+$right move right
+
+# whkd: alt + shift + d/s : komorebic cycle-focus previous/next
+bindsym $mod+Shift+d focus prev
+bindsym $mod+Shift+s focus next
+
+# whkd: alt + shift + return : komorebic promote
+#
+# i3 has no "promote to primary" - there is no master/stack model to promote
+# into. Left unbound deliberately rather than mapped to something unrelated.
+
+# =============================================================================
+# Window manipulation
+# =============================================================================
+
+# whkd: alt + back : komorebic close
+bindsym $mod+BackSpace kill
+
+# whkd: alt + m : komorebic minimize
+#
+# i3 has no minimize; the scratchpad is the standard equivalent. Unlike
+# komorebi this needs an explicit key to bring windows back, so $mod+Shift+m
+# cycles through whatever has been sent there.
+bindsym $mod+m       move scratchpad
+bindsym $mod+Shift+m scratchpad show
+
+# whkd: alt + f : komorebic toggle-monocle
+bindsym $mod+f fullscreen toggle
+
+# whkd: alt + shift + f : komorebic toggle-float
+bindsym $mod+Shift+f floating toggle
+bindsym $mod+Shift+space focus mode_toggle
+
+# Drag floating windows with the modifier held.
+floating_modifier $mod
+
+# =============================================================================
+# Layout
+# =============================================================================
+#
+# whkd's alt + arrow keys call `komorebic stack <direction>`. i3 has no
+# directional stacking, so the arrows select the container layout instead -
+# which is what stacking actually achieves in i3 terms.
+bindsym $mod+Up    layout stacking
+bindsym $mod+Down  layout tabbed
+bindsym $mod+Left  layout splitv
+bindsym $mod+Right layout splith
+
+# whkd: alt + oem_1 (;) : komorebic unstack
+bindsym $mod+semicolon layout toggle split
+
+# whkd: alt + oem_4/oem_6 ([ and ]) : komorebic cycle-stack previous/next
+bindsym $mod+bracketleft  focus prev sibling
+bindsym $mod+bracketright focus next sibling
+
+# whkd: alt + x / alt + y : komorebic flip-layout horizontal/vertical
+#
+# i3 cannot mirror a layout. `layout toggle split` swaps the split axis, which
+# is the nearest thing; the vertical binding toggles through every layout.
+bindsym $mod+x layout toggle split
+bindsym $mod+y layout toggle all
+
+# Choose the split direction for the next window.
+bindsym $mod+v split toggle
+
+bindsym $mod+a focus parent
+bindsym $mod+Shift+a focus child
+
+# =============================================================================
+# Resize
+# =============================================================================
+
+# whkd: alt + oem_plus/minus : komorebic resize-axis horizontal
+bindsym $mod+plus  resize grow   width 5 ppt
+bindsym $mod+minus resize shrink width 5 ppt
+
+# whkd: alt + shift + oem_plus/minus : komorebic resize-axis vertical
+bindsym $mod+Shift+plus  resize grow   height 5 ppt
+bindsym $mod+Shift+minus resize shrink height 5 ppt
+
+# =============================================================================
+# Applications
+# =============================================================================
+#
+# whkd focuses the app if running and launches it otherwise, via AppActivate.
+# i3 has no built-in equivalent, so these always launch. `rofi -show window`
+# ($mod+w) covers the "jump to an already-open window" half.
+bindsym $mod+t       exec --no-startup-id $term
+bindsym $mod+Shift+t exec --no-startup-id $term
+bindsym $mod+b       exec --no-startup-id google-chrome-stable
+bindsym $mod+d       exec --no-startup-id $menu
+bindsym $mod+w       exec --no-startup-id rofi -show window
+
+# flameshot is in packages.tsv on both platforms.
+bindsym Print exec --no-startup-id flameshot gui
+
+# =============================================================================
+# Window manager control
+# =============================================================================
+
+# whkd: alt + shift + c : komorebic reload-configuration
+bindsym $mod+Shift+c reload
+# whkd: alt + shift + r : komorebic retile
+bindsym $mod+Shift+r restart
+bindsym $mod+Shift+e exec --no-startup-id "i3-nagbar -t warning -m 'Exit i3?' -B 'Yes' 'i3-msg exit'"
+
+# whkd's alt+o (restart whkd) and alt+i (toggle-shortcuts) have no i3
+# equivalent: i3 handles its own key bindings, so there is no separate hotkey
+# daemon to restart or suspend. alt+p (toggle-pause) likewise has no analogue.
+
+# =============================================================================
+# Autostart
+# =============================================================================
+
+# The old sway config set a wallpaper from ~/wallpapers, which was deleted
+# during the cleanup along with the rest of the abandoned Linux attempt. Point
+# feh at a new one when you have it:
+# exec --no-startup-id feh --bg-fill ~/wallpapers/<file>
+
+# sway handled laptop lid state with `bindswitch lid:on`. i3 has no such
+# command; on X11 this belongs in logind (HandleLidSwitch in logind.conf).
+
+# =============================================================================
+# Bar
+# =============================================================================
+#
+# Mirrors komorebi.bar.json: workspaces and layout on the left, then time
+# (24h), date (DD/MM/YYYY), memory and network on the right. The right side is
+# driven by .config/i3status/config.
+bar {
+    status_command i3status
+    position top
+    font pango:CommitMono Nerd Font 10
+
+    colors {
+        background $base
+        statusline $text
+        separator  $overlay0
+
+        #                  border     backgr.    text
+        focused_workspace  $lavender  $lavender  $crust
+        active_workspace   $surface0  $surface0  $text
+        inactive_workspace $mantle    $mantle    $subtext0
+        urgent_workspace   $red       $red       $crust
+        binding_mode       $peach     $peach     $crust
+    }
+}

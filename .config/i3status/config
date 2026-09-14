@@ -1,0 +1,54 @@
+# i3status, mirroring the right-hand widgets of komorebi.bar.json:
+#   Time (24 hour) | Date (day-month-year) | Memory | Network
+#
+# The left-hand side of that bar (workspaces, layout) is i3bar's own job and is
+# configured in ../i3/config, not here.
+
+general {
+        output_format = "i3bar"
+        colors = true
+        interval = 5
+
+        # Catppuccin Frappé, matching the i3 client colours.
+        color_good     = "#a6d189"
+        color_degraded = "#e5c890"
+        color_bad      = "#e78284"
+}
+
+# Order matches komorebi.bar.json's right_widgets, read left to right.
+# i3status renders top-to-bottom here as left-to-right in the bar, so network
+# and memory come first to end up left of the clock.
+order += "ethernet _first_"
+order += "wireless _first_"
+order += "memory"
+order += "tztime date"
+order += "tztime local"
+
+# komorebi.bar.json: Network, show_activity false -> address only, no rates.
+ethernet _first_ {
+        format_up   = "eth %ip"
+        format_down = ""
+}
+
+wireless _first_ {
+        format_up   = "%essid %ip"
+        format_down = ""
+}
+
+# komorebi.bar.json: Memory widget.
+memory {
+        format         = "mem %used/%total"
+        threshold_degraded = "10%"
+        threshold_critical = "5%"
+        format_degraded    = "mem LOW %available"
+}
+
+# komorebi.bar.json: Date, format DateMonthYear.
+tztime date {
+        format = "%d-%m-%Y"
+}
+
+# komorebi.bar.json: Time, format TwentyFourHour.
+tztime local {
+        format = "%H:%M"
+}

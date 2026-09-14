@@ -24,6 +24,11 @@ lazygit	extras/lazygit	lazygit	lazygit
 uv	main/uv	uv	uv
 jq	main/jq	jq	jq
 curl	main/curl	curl	curl
+# eza replaces ls, bat replaces cat; both aliased in .bashrc and the PS profile.
+eza	main/eza	eza	eza
+bat	main/bat	bat	bat
+# atuin: shell history. Note it also binds Ctrl+R, overlapping PSFzf on Windows.
+atuin	main/atuin	atuin	atuin
 tree-sitter	main/tree-sitter	tree-sitter	tree-sitter-cli
 nodejs	main/nodejs	node	nodejs
 rustup	main/rustup	rustup-init	rustup
@@ -55,6 +60,13 @@ whkd	extras/whkd	-	-
 i3	-	-	i3-wm
 i3status	-	-	i3status
 rofi	-	-	rofi
+# Terminal for i3. Windows uses Windows Terminal, which has no Linux build, so
+# this is the one tool with no cross-platform counterpart. Change it here and in
+# `set $term` at the top of .config/i3/config together.
+kitty	-	kitty	kitty
+# xclip is the X11 clipboard helper that .config/tmux/plugins.linux.conf falls
+# back to when wl-copy (Wayland) is unavailable.
+xclip	-	-	xclip
 
 # --- misc --------------------------------------------------------------------
 flameshot	extras/flameshot	-	flameshot

@@ -52,8 +52,27 @@ else
   bind '"\C-r": reverse-search-history'
 fi
 
+# --- modern replacements ------------------------------------------------------
+# Mirrors powershell/functions/modern-cli.ps1. Each guarded so a machine that
+# has not run bootstrap yet still gets working ls/cat.
+if command -v eza >/dev/null 2>&1; then
+  alias ls='eza --group-directories-first'
+  alias l='eza --group-directories-first --long --git'
+  alias la='eza --group-directories-first --long --git --all'
+  alias ll='eza --group-directories-first --long --git --all'
+  alias lt='eza --group-directories-first --tree --level=2'
+else
+  alias ls='ls --color=auto'
+  alias ll='ls -lafg --color=auto'
+fi
+
+if command -v bat >/dev/null 2>&1; then
+  # --paging=never so cat stays usable in pipelines instead of opening a pager.
+  alias cat='bat --paging=never'
+  alias batp='bat'
+fi
+
 # --- aliases and functions ----------------------------------------------------
-alias ll="ls -lafg --color=auto"
 
 envup() {
   local file="${1:-.env}"
@@ -96,6 +115,11 @@ n() { nvim .; }
 # --- prompt and navigation ----------------------------------------------------
 command -v starship >/dev/null 2>&1 && eval "$(starship init bash)"
 command -v zoxide   >/dev/null 2>&1 && eval "$(zoxide init bash --cmd c)"
+
+# atuin owns Ctrl+R when present, replacing _fzf_history_widget above.
+if command -v atuin >/dev/null 2>&1; then
+  eval "$(atuin init bash --disable-up-arrow)"
+fi
 
 # --- machine-local overrides --------------------------------------------------
 # Gitignored. Project shortcuts, proxies, credentials, uv's PATH shim.
