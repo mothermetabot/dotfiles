@@ -59,8 +59,10 @@ if command -v eza >/dev/null 2>&1; then
   alias ls='eza --group-directories-first'
   alias l='eza --group-directories-first --long --git'
   alias la='eza --group-directories-first --long --git --all'
-  alias ll='eza --group-directories-first --long --git --all'
   alias lt='eza --group-directories-first --tree --level=2'
+  # CAVEAT: eza's -f is --only-files, which HIDES directories. It is not GNU
+  # ls's -f (do not sort). If you wanted the old `ls -lafg` listing, use `la`.
+  alias ll='eza -afGH'
 else
   alias ls='ls --color=auto'
   alias ll='ls -lafg --color=auto'
@@ -87,13 +89,45 @@ envup() {
   fi
 }
 
-# gl: pretty git log. Mirrors the `gl` provided by the GG module on Windows.
+# gl: pretty git log. Mirrors powershell/functions/git-shortcuts.ps1.
+#   gl              -> current branch only
+#   gl main         -> that branch only
+#   gl main feat/x  -> those branches only
+#   gl --all        -> anything else passes straight through to git log
 gl() {
   local fmt='%C(bold blue)%h%C(reset) %C(bold green)%ad%C(reset)%C(red)%d%C(reset)%n  %s %C(dim white)(%an)%C(reset)'
+  local common=(--graph --decorate --color --date=short --pretty=format:"$fmt")
   if [ $# -eq 0 ]; then
-    git log --graph --decorate --color --date=short --pretty=format:"$fmt" --all
+    # HEAD rather than --all, and it still resolves when detached.
+    git log "${common[@]}" HEAD
   else
-    git log --graph --decorate --color --date=short --pretty=format:"$fmt" "$@"
+    git log "${common[@]}" "$@"
+  fi
+}
+
+# Complete gl with branch names, local first then remote.
+_gl_complete() {
+  local cur="${COMP_WORDS[COMP_CWORD]}"
+  local branches
+  branches=$(
+    git branch --format='%(refname:short)' 2>/dev/null
+    git branch -r --format='%(refname:short)' 2>/dev/null
+  )
+  mapfile -t COMPREPLY < <(compgen -W "$branches" -- "$cur")
+}
+complete -F _gl_complete gl
+
+# gs: short status with branch header.
+gs() { git status --short --branch "$@"; }
+
+# ga: stage everything in the repo, from anywhere inside it.
+# `:/` is git's top-level pathspec magic, so this reaches the repo root with no
+# cd and no `git rev-parse --show-toplevel`.
+ga() {
+  if [ $# -eq 0 ]; then
+    git add --all -- :/
+  else
+    git add --all -- "$@"
   fi
 }
 

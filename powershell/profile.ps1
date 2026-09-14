@@ -15,14 +15,24 @@ foreach ($a in 'ls', 'rm', 'gl', 'cat') {
     if (Test-Path "Alias:$a") { Remove-Item "Alias:$a" -Force -ErrorAction SilentlyContinue }
 }
 
-# --- functions ----------------------------------------------------------------
-Get-ChildItem -LiteralPath "$PSScriptRoot\functions" -Filter '*.ps1' -ErrorAction SilentlyContinue |
-    ForEach-Object { . $_.FullName }
-
 # --- git quality of life ------------------------------------------------------
+# Imported BEFORE functions/ on purpose: GG exports `gl` and `gs`, and the
+# repo's own definitions in functions/git-shortcuts.ps1 should win. Swap these
+# two blocks to prefer GG's versions instead.
 $ggModulePath = Join-Path $DotfilesRoot '..\src\gg\GG.psd1'
 if (Test-Path -LiteralPath $ggModulePath) { Import-Module $ggModulePath }
 Remove-Variable ggModulePath -ErrorAction SilentlyContinue
+
+# GG exports `gl` as an alias, which would still shadow the function below
+# since PowerShell resolves aliases first. Same for ga/gs if GG ever aliases
+# them too.
+foreach ($a in 'gl', 'gs', 'ga') {
+    if (Test-Path "Alias:$a") { Remove-Item "Alias:$a" -Force -ErrorAction SilentlyContinue }
+}
+
+# --- functions ----------------------------------------------------------------
+Get-ChildItem -LiteralPath "$PSScriptRoot\functions" -Filter '*.ps1' -ErrorAction SilentlyContinue |
+    ForEach-Object { . $_.FullName }
 
 # --- modules ------------------------------------------------------------------
 # Installed by bootstrap.ps1, not here: the old profile ran Install-Module
