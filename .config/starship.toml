@@ -36,7 +36,9 @@
 
 add_newline = false
 
-format = "$directory${env_var.git_branch}$character"
+# $line_break puts the λ on its own line, so long paths never squeeze the
+# place you actually type. It is a pure formatting module - no cost.
+format = "$directory${env_var.git_branch}$line_break$character"
 
 # =============================================================================
 
