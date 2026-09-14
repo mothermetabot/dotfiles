@@ -54,10 +54,19 @@ winget	main/winget	-	-
 # the platform, see .config/tmux/tmux.conf).
 psmux	main/psmux	-	-
 tmux	-	tmux	tmux
-# PowerShell 7. Required by psmux's plugin manager (PPM), whose Prefix+I/U/M
-# bindings and background pollers all shell out to `pwsh` - they fail silently
-# with "cannot find the file specified" when only Windows PowerShell 5.1 exists.
-pwsh	main/pwsh	-	-
+# NOTE: pwsh (PowerShell 7) is deliberately NOT here. It was added for psmux's
+# plugin manager PPM, and PPM was removed when the plugins turned out to cost
+# 1.3-2.6s of startup. Nothing needs it now.
+#
+# It is also not worth adopting as the default shell: measured on this machine,
+# direct exe to direct exe, PowerShell 7 starts about twice as slow.
+#
+#   bare -NoProfile ...... 5.1: 135 ms   7: 259 ms
+#   + PSReadLine ......... 5.1: 155 ms   7: 318 ms
+#   with this profile .... 5.1: 306 ms   7: 498 ms
+#
+# The profile itself runs fine under 7 - same prompt, Ctrl+R, zero errors - so
+# this is purely a startup-latency call.
 
 # --- window manager ----------------------------------------------------------
 komorebi	extras/komorebi	-	-
