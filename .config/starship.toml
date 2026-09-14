@@ -38,16 +38,19 @@ add_newline = false
 
 # $line_break puts the λ on its own line, so long paths never squeeze the
 # place you actually type. It is a pure formatting module - no cost.
-format = "$directory${env_var.git_branch}$line_break$character"
+format = "${env_var.dir}${env_var.git_branch}$line_break$character"
 
 # =============================================================================
 
-[directory]
-# Off because it makes directory open the git repo just to find the root.
-truncate_to_repo = false
-truncation_length = 3
+# starship's own [directory] is NOT used: with truncate_to_repo on it opens the
+# git repo to find the root (143ms in .dotfiles, 215ms in a larger repo), and
+# with it off you lose repo-relative paths. Both variables below are computed
+# in-shell instead - see powershell/functions/prompt-vars.ps1 and the matching
+# block in .bashrc - which gives repo-relative truncation for free.
+[env_var.dir]
+variable = 'STARSHIP_DIR'
+format = '[$env_value](bold cyan) '
 
-# Branch from $STARSHIP_GIT_BRANCH, set by git-branch-fast.ps1. No repo access.
 [env_var.git_branch]
 variable = 'STARSHIP_GIT_BRANCH'
 format = 'on [ $env_value](bold purple) '

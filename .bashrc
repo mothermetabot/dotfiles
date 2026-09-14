@@ -139,6 +139,82 @@ fvim() {
 
 n() { nvim .; }
 
+# --- prompt data --------------------------------------------------------------
+# Equivalent of powershell/functions/prompt-vars.ps1. The starship config is
+# SHARED between both platforms and renders these two variables with its
+# [env_var] module, so without this the branch and path silently vanish here.
+#
+# The point is that starship never opens the git repo: its git modules - and
+# `directory` with truncate_to_repo on - cost ~130ms per prompt on the Windows
+# box for the repo open alone. Reading .git/HEAD is a fraction of a ms.
+#
+# Change this and prompt-vars.ps1 together; they must produce the same strings.
+_dotfiles_prompt_max_parts=3
+
+_dotfiles_prompt_vars() {
+  local path repo_root='' branch='' git_path head gitdir rel display
+  path=$PWD
+
+  local dir=$path
+  while [ -n "$dir" ]; do
+    git_path="$dir/.git"
+    if [ -e "$git_path" ]; then
+      repo_root=$dir
+      if [ -d "$git_path" ]; then
+        head="$git_path/HEAD"
+      else
+        # Worktrees and submodules use a .git FILE: "gitdir: <path>"
+        gitdir=$(sed -n 's/^gitdir: //p' "$git_path" 2>/dev/null)
+        case "$gitdir" in
+          /*) : ;;
+          ?*) gitdir="$dir/$gitdir" ;;
+        esac
+        head="${gitdir:+$gitdir/HEAD}"
+      fi
+      if [ -n "$head" ] && [ -r "$head" ]; then
+        local ref
+        ref=$(<"$head")
+        case "$ref" in
+          "ref: refs/heads/"*) branch=${ref#ref: refs/heads/} ;;
+          ?*)                  branch=${ref:0:7} ;;   # detached HEAD
+        esac
+      fi
+      break
+    fi
+    [ "$dir" = "/" ] && break
+    dir=$(dirname "$dir")
+  done
+
+  if [ -n "$branch" ]; then export STARSHIP_GIT_BRANCH="$branch"
+  else unset STARSHIP_GIT_BRANCH
+  fi
+
+  if [ -n "$repo_root" ]; then
+    rel=${path#"$repo_root"}; rel=${rel#/}
+    display="${repo_root##*/}${rel:+/$rel}"
+  else
+    case "$path" in
+      "$HOME")   display='~' ;;
+      "$HOME"/*) display="~/${path#"$HOME"/}" ;;
+      *)         display=$path ;;
+    esac
+  fi
+
+  # Keep only the last N components, like starship's truncation_length.
+  local IFS='/' parts=() p
+  read -ra parts <<< "$display"
+  local kept=()
+  for p in "${parts[@]}"; do [ -n "$p" ] && kept+=("$p"); done
+  if [ "${#kept[@]}" -gt "$_dotfiles_prompt_max_parts" ]; then
+    display=$(IFS=/; echo "${kept[*]: -$_dotfiles_prompt_max_parts}")
+  fi
+
+  export STARSHIP_DIR="$display"
+}
+
+# starship calls this before every prompt, if defined.
+starship_precmd_user_func() { _dotfiles_prompt_vars; }
+
 # --- prompt and navigation ----------------------------------------------------
 command -v starship >/dev/null 2>&1 && eval "$(starship init bash)"
 command -v zoxide   >/dev/null 2>&1 && eval "$(zoxide init bash --cmd c)"
