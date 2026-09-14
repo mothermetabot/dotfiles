@@ -42,25 +42,29 @@ $script:ClrReset = "$($script:Esc)[0m"
 function script:Get-RepoInfo([string]$Path) {
     $dir = $Path
     while ($dir) {
-        $git = Join-Path $dir '.git'
-        if (Test-Path -LiteralPath $git) {
+        $git = "$dir\.git"
+        # .NET rather than Test-Path/Get-Item: this runs on EVERY prompt, and
+        # the first filesystem cmdlet in a process costs ~27ms vs ~3ms.
+        $isDir  = [System.IO.Directory]::Exists($git)
+        $isFile = -not $isDir -and [System.IO.File]::Exists($git)
+        if ($isDir -or $isFile) {
             $headFile = $null
-            if ((Get-Item -LiteralPath $git -Force).PSIsContainer) {
-                $headFile = Join-Path $git 'HEAD'
+            if ($isDir) {
+                $headFile = "$git\HEAD"
             } else {
                 # Worktrees and submodules use a .git FILE: "gitdir: <path>"
                 $line = [System.IO.File]::ReadAllText($git).Trim()
                 if ($line -match '^gitdir:\s*(.+)$') {
                     $gitDir = $matches[1].Trim()
                     if (-not [System.IO.Path]::IsPathRooted($gitDir)) {
-                        $gitDir = Join-Path $dir $gitDir
+                        $gitDir = "$dir\$gitDir"
                     }
-                    $headFile = Join-Path $gitDir 'HEAD'
+                    $headFile = "$gitDir\HEAD"
                 }
             }
 
             $branch = $null
-            if ($headFile -and (Test-Path -LiteralPath $headFile)) {
+            if ($headFile -and [System.IO.File]::Exists($headFile)) {
                 $head = [System.IO.File]::ReadAllText($headFile).Trim()
                 if ($head.StartsWith('ref: refs/heads/')) {
                     $branch = $head.Substring(16)
@@ -71,7 +75,7 @@ function script:Get-RepoInfo([string]$Path) {
             return @{ Root = $dir; Branch = $branch }
         }
 
-        $parent = Split-Path -Parent $dir
+        $parent = [System.IO.Path]::GetDirectoryName($dir)
         if (-not $parent -or $parent -eq $dir) { break }
         $dir = $parent
     }
@@ -82,7 +86,7 @@ function script:Get-PromptPath([string]$Path, [string]$RepoRoot) {
     if ($RepoRoot) {
         # Repo-relative, which is what starship's truncate_to_repo produced -
         # but without opening the repo to find the root.
-        $repoName = Split-Path -Leaf $RepoRoot
+        $repoName = [System.IO.Path]::GetFileName($RepoRoot.TrimEnd('\', '/'))
         $rel = $Path.Substring($RepoRoot.Length).Trim('\', '/')
         $display = if ($rel) { "$repoName/$($rel -replace '\\', '/')" } else { $repoName }
     } else {

@@ -9,22 +9,38 @@
 # The other fix is using Replace(0, len, text) rather than RevertLine + Insert,
 # which is what PSFzf does and behaves correctly with a non-empty buffer.
 #
-# Gate on Get-Command, NOT `Get-Module -Name PSReadLine`: the console host
-# imports PSReadLine lazily, AFTER the profile runs, so a Get-Module check is
-# false here and the handler silently never registers.
+# Do NOT gate on `Get-Module -Name PSReadLine`: the console host imports it
+# lazily, AFTER the profile runs, so that check is false here and the handler
+# silently never registers.
+#
+# Import explicitly rather than letting Get-Command auto-load it. Auto-loading
+# makes PowerShell scan every module path to find which module provides the
+# command. Measured in fresh processes:
+#
+#   Get-Command Set-PSReadLineKeyHandler ... 50 ms   (triggers the search)
+#   Import-Module PSReadLine ............... 39 ms   (no search)
+#   Set-PSReadLineKeyHandler itself ........ 30 ms
+#
+# The import is not really our cost - an interactive shell loads PSReadLine
+# regardless - but the ~10ms of searching is.
+Import-Module PSReadLine -ErrorAction SilentlyContinue
 
-if ((Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue) -and
-    (Get-Command fzf -ErrorAction SilentlyContinue)) {
+if (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue) {
 
     Set-PSReadLineKeyHandler -Key 'Ctrl+r' -BriefDescription 'FzfHistory' `
         -LongDescription 'Search command history with fzf' -ScriptBlock {
+
+        # fzf is checked HERE, not at registration: it only matters on keypress,
+        # it saves a PATH scan at startup, and installing fzf later then works
+        # without re-sourcing the profile.
+        if (-not (Get-Command fzf -ErrorAction SilentlyContinue)) { return }
 
         $line   = $null
         $cursor = $null
         [Microsoft.PowerShell.PSConsoleReadLine]::GetBufferState([ref]$line, [ref]$cursor)
 
         $histFile = (Get-PSReadLineOption).HistorySavePath
-        if (-not (Test-Path -LiteralPath $histFile)) { return }
+        if (-not [System.IO.File]::Exists($histFile)) { return }
 
         # Newest first, de-duplicated while preserving that order.
         $seen    = [System.Collections.Generic.HashSet[string]]::new()

@@ -23,17 +23,16 @@ function script:Use-CachedInit {
     if (-not $exe) { return }
 
     $cacheRoot = if ($env:XDG_CACHE_HOME) { $env:XDG_CACHE_HOME } else { $env:LOCALAPPDATA }
-    $cacheDir  = Join-Path $cacheRoot 'dotfiles-init'
-    if (-not (Test-Path -LiteralPath $cacheDir)) {
-        New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null
-    }
-    $cache = Join-Path $cacheDir "$Name.ps1"
+    $cacheDir  = "$cacheRoot\dotfiles-init"
+    # .NET rather than Test-Path/New-Item: see the note at the top of profile.ps1.
+    [void][System.IO.Directory]::CreateDirectory($cacheDir)
+    $cache = "$cacheDir\$Name.ps1"
 
     # Regenerate when the cache is missing or older than the executable.
     $stale = $true
-    if (Test-Path -LiteralPath $cache) {
-        $stale = (Get-Item -LiteralPath $cache).LastWriteTimeUtc -lt
-                 (Get-Item -LiteralPath $exe.Source).LastWriteTimeUtc
+    if ([System.IO.File]::Exists($cache)) {
+        $stale = [System.IO.File]::GetLastWriteTimeUtc($cache) -lt
+                 [System.IO.File]::GetLastWriteTimeUtc($exe.Source)
     }
 
     if ($stale) {

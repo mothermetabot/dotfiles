@@ -4,11 +4,21 @@
 #
 # Startup budget, measured medians on this machine:
 #   bare shell (-NoProfile) ....  128 ms
-#   this profile ............... ~250 ms
+#   this profile ...............  see the numbers in git log
 #   before the perf pass ....... ~900 ms
 #
-# What was removed to get there, and why, is noted inline. Keep new work out of
-# the startup path: prefer a lazy stub or a cached init over an import.
+# Keep new work out of the startup path: prefer a lazy stub or a cached init
+# over an import.
+#
+# AND PREFER .NET CALLS OVER CMDLETS HERE. The first use of a filesystem cmdlet
+# in a process costs ~27ms - loading the provider and JITing the cmdlet - while
+# the .NET equivalent is ~3ms. Measured in fresh processes:
+#
+#   Test-Path ....................... 27.2 ms   [IO.File]::Exists ........ 2.9 ms
+#   Get-ChildItem ................... 28.4 ms   [IO.Directory]::GetFiles . 3.2 ms
+#   (Get-Item x).LastWriteTimeUtc ... 29.0 ms   [IO.File]::GetLastWrite... 3.0 ms
+#
+# That is why this file looks less idiomatic than it otherwise would.
 
 $DotfilesRoot = Split-Path -Parent $PSScriptRoot
 
@@ -19,37 +29,23 @@ $DotfilesRoot = Split-Path -Parent $PSScriptRoot
 # This has to happen before functions/ is dot-sourced: PowerShell resolves
 # aliases BEFORE functions, so `function cat { bat ... }` alone is silently
 # ignored while the built-in Get-Content alias still exists.
-foreach ($a in 'rm', 'gl', 'cat', 'gs', 'ga') {
-    if (Test-Path "Alias:$a") { Remove-Item "Alias:$a" -Force -ErrorAction SilentlyContinue }
-}
+#
+# Only these three are real built-in aliases. gs and ga used to be here too,
+# but only because the old GG module exported them; that module is gone.
+#
+# One Remove-Item, no Test-Path: -ErrorAction already covers a missing alias,
+# and Test-Path was a second provider hit for nothing. -Ignore rather than
+# -SilentlyContinue, which still appends to $Error.
+Remove-Item -Path Alias:rm, Alias:gl, Alias:cat -Force -ErrorAction Ignore
 
 # --- functions ----------------------------------------------------------------
-Get-ChildItem -LiteralPath "$PSScriptRoot\functions" -Filter '*.ps1' -ErrorAction SilentlyContinue |
-    ForEach-Object { . $_.FullName }
+foreach ($f in [System.IO.Directory]::GetFiles("$PSScriptRoot\functions", '*.ps1')) { . $f }
 
-# --- git quality of life (lazy) -----------------------------------------------
-# Importing GG cost 137 ms on every shell start, and the only command it
-# uniquely provides is `gg` - its ga/gl/gs are overridden by
-# functions/git-shortcuts.ps1 anyway.
-#
-# So `gg` is a stub that loads the module on first use, then re-applies the
-# repo's own definitions (Import-Module would otherwise shadow them) and
-# forwards the call.
-$script:GGModulePath = Join-Path $DotfilesRoot '..\src\gg\GG.psd1'
-if (Test-Path -LiteralPath $script:GGModulePath) {
-    function gg {
-        Remove-Item function:gg -Force -ErrorAction SilentlyContinue
-        Import-Module $script:GGModulePath -Force
-
-        # GG re-exports ga/gl/gs; put ours back on top.
-        . "$PSScriptRoot\functions\git-shortcuts.ps1"
-        foreach ($a in 'gl', 'gs', 'ga') {
-            if (Test-Path "Alias:$a") { Remove-Item "Alias:$a" -Force -ErrorAction SilentlyContinue }
-        }
-
-        & (Get-Command gg -CommandType Function, Cmdlet, Alias | Select-Object -First 1) @args
-    }
-}
+# --- gg -----------------------------------------------------------------------
+# The GG PowerShell module is gone: ~/home/src/gg is now a Rust project and
+# ships no .psd1, so the lazy-import stub that used to live here could never
+# fire again. Only a debug build exists and it is not on PATH - if you want
+# `gg` back, `cargo install --path ~/home/src/gg` and it needs nothing here.
 
 # --- modules ------------------------------------------------------------------
 # None, deliberately.
@@ -82,11 +78,10 @@ Use-CachedInit -Name 'zoxide' -Command 'zoxide' -Arguments @('init', 'powershell
 # The failure is silent and confusing: prefix falls back to C-b, so Ctrl+T is
 # never captured and falls through to whatever the shell has bound.
 if (-not $env:PSMUX_CONFIG_FILE) {
-    $env:PSMUX_CONFIG_FILE = Join-Path $DotfilesRoot '.config\tmux\tmux.conf'
+    $env:PSMUX_CONFIG_FILE = "$DotfilesRoot\.config\tmux\tmux.conf"
 }
 
 # --- machine-local overrides --------------------------------------------------
 # Gitignored. Put work-specific paths, proxies and credentials here.
-$localProfile = Join-Path $PSScriptRoot 'profile.local.ps1'
-if (Test-Path -LiteralPath $localProfile) { . $localProfile }
-Remove-Variable localProfile -ErrorAction SilentlyContinue
+$localProfile = "$PSScriptRoot\profile.local.ps1"
+if ([System.IO.File]::Exists($localProfile)) { . $localProfile }

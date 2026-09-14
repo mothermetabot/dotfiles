@@ -50,8 +50,8 @@ Register-ArgumentCompleter -CommandName gl -ScriptBlock {
         }
 }
 
-# gs: short status with branch header.
-function gs { git status --short --branch @args }
+# gs: short status.
+function gs { git status --short @args }
 
 # ga: stage everything in the repo, from anywhere inside it.
 #

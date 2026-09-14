@@ -110,8 +110,8 @@ _gl_complete() {
 }
 complete -F _gl_complete gl
 
-# gs: short status with branch header.
-gs() { git status --short --branch "$@"; }
+# gs: short status.
+gs() { git status --short "$@"; }
 
 # ga: stage everything in the repo, from anywhere inside it.
 # `:/` is git's top-level pathspec magic, so this reaches the repo root with no
