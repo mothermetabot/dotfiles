@@ -18,10 +18,11 @@
     3. The PowerShell profile is a generated one-line stub that dot-sources the
        repo, not a link. Immune to rename-on-save by construction.
 
-    Layout note: packages mirror $HOME the way GNU stow expects, so Linux can
-    `stow nvim git tmux` over the exact same tree. On Windows the deploy target
-    is %USERPROFILE%, because that is where 32 of your 36 dotdirs already live.
-    $HOME (~\home) is your workspace root and is deliberately left alone.
+    Layout note: the repo root mirrors $HOME the way GNU stow expects, so Linux
+    runs a single `stow .` over the exact same tree (see .stow-local-ignore for
+    what is held back). On Windows the deploy target is %USERPROFILE%, because
+    that is where 32 of your 36 dotdirs already live. $HOME (~\home) is your
+    workspace root and is deliberately left alone.
 
 .PARAMETER DryRun
     Print every change without making it. Run this first.
@@ -61,13 +62,20 @@ function Write-Plan($m) { Write-Host "  ? $m" -ForegroundColor Magenta;  $script
 # What gets deployed
 # =============================================================================
 
-# Config directories junctioned into $XDG_CONFIG_HOME. Directory junctions are
-# the only link type available unprivileged, which is fine: every one of these
-# is a directory.
+# Every directory under .config/ is junctioned into $XDG_CONFIG_HOME. Discovered
+# rather than listed, so adding a tool means adding a directory and nothing else.
+#
+# Directory junctions are the only link type available unprivileged, which is
+# fine here: loose FILES under .config/ (starship.toml) are not linked at all,
+# they are pointed at by an environment variable instead. See $EnvVars.
+$LinuxOnlyConfig = @('i3', 'i3status', 'sway', 'rofi')
+
 $Junctions = @(
-    @{ Name = 'nvim'; Link = "$Xdg\nvim"; Target = "$Repo\nvim\.config\nvim" }
-    @{ Name = 'tmux'; Link = "$Xdg\tmux"; Target = "$Repo\tmux\.config\tmux" }
-    @{ Name = 'git';  Link = "$Xdg\git";  Target = "$Repo\git\.config\git"   }
+    Get-ChildItem -LiteralPath "$Repo\.config" -Directory -ErrorAction SilentlyContinue |
+        Where-Object { $LinuxOnlyConfig -notcontains $_.Name } |
+        ForEach-Object {
+            @{ Name = $_.Name; Link = "$Xdg\$($_.Name)"; Target = $_.FullName }
+        }
 )
 
 # User-scope environment. Machine scope is never used: these are per-user tools,
@@ -81,7 +89,7 @@ $EnvVars = [ordered]@{
     'XDG_DATA_HOME'        = "$Target\.local\share"
     'XDG_STATE_HOME'       = "$Target\.local\state"
     'XDG_CACHE_HOME'       = "$Target\.cache"
-    'STARSHIP_CONFIG'      = "$Repo\starship\.config\starship.toml"
+    'STARSHIP_CONFIG'      = "$Repo\.config\starship.toml"
     'KOMOREBI_CONFIG_HOME' = "$Repo\komorebi"
     'WHKD_CONFIG_HOME'     = "$Repo\komorebi"
 }

@@ -1,0 +1,19 @@
+# Held back from `stow`, because the repo root mirrors $HOME but not everything
+# in it is $HOME content.
+#
+# Patterns are Perl regexes anchored against the path relative to this package.
+# Stow already ignores .git, .gitignore, and root-level README.*/LICENSE.* by
+# default; everything below is what its default list does not cover.
+
+# Bootstrap machinery - not config.
+^/bootstrap\.ps1$
+^/bootstrap\.sh$
+^/install$
+^/\.gitattributes$
+^/\.stow-local-ignore$
+
+# Reached by $KOMOREBI_CONFIG_HOME, never linked into $HOME. Windows-only.
+^/komorebi$
+
+# Dot-sourced by a generated stub at $PROFILE, not linked. Windows-only.
+^/powershell$
