@@ -78,6 +78,16 @@ $Junctions = @(
         }
 )
 
+# nvim also gets its Windows-native location, for the same reason ~/.gitconfig
+# gets an include stub: a process that did not inherit XDG_CONFIG_HOME would
+# otherwise fall back to %LOCALAPPDATA%\nvim and find nothing. Both paths
+# resolve to the same directory, so the config is reachable either way.
+$Junctions += @{
+    Name   = 'nvim (LOCALAPPDATA fallback)'
+    Link   = "$env:LOCALAPPDATA\nvim"
+    Target = "$Repo\.config\nvim"
+}
+
 # User-scope environment. Machine scope is never used: these are per-user tools,
 # and bootstrap.bat's `setx /M` required two UAC prompts to set variables that
 # (as the live machine shows) were only ever actually set at User scope anyway.

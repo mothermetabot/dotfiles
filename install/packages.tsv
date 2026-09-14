@@ -64,4 +64,15 @@ stow	-	stow	stow
 # --- fonts -------------------------------------------------------------------
 # Windows: scoop nerd-fonts bucket, per-user install, no admin.
 # Linux:   brew/distro do not ship Nerd Fonts; bootstrap.sh uses getnf instead.
+#
+# Pick the -NF-Mono variant, not plain -NF or -NF-Propo: it forces single-width
+# glyphs, which is what tmux/nvim column alignment depends on.
+#
+# KNOWN WART on domain-joined machines: the nerd-fonts manifest's install script
+# calls Set-Acl on %LOCALAPPDATA%\Microsoft\Windows\Fonts, which fails with
+# "The trust relationship between this workstation and the primary domain
+# failed" when domain SIDs cannot be resolved. The failure happens AFTER the
+# fonts are copied and registered, so the font works regardless - only scoop's
+# bookkeeping is left saying "Install failed". `scoop uninstall` then
+# `scoop install` again clears the record.
 CommitMono-NF-Mono	nerd-fonts/CommitMono-NF-Mono	-	-
