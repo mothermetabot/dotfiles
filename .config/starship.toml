@@ -5,6 +5,26 @@
 add_newline = false
 
 # Replace the '❯' symbol in the prompt with '➜'
+# PERF NOTE - do not "fix" this with truncate_to_repo = false.
+#
+# In a git repo this prompt costs ~175ms, and `starship timings` blames
+# whichever module opens the repo FIRST:
+#
+#   truncate_to_repo = true    directory 153ms, git_branch <1ms  -> 185ms total
+#   truncate_to_repo = false   directory  <1ms, git_branch 142ms -> 198ms total
+#
+# The cost is starship's repo-open, not path truncation, so turning truncation
+# off just moves it to git_branch and loses the nicer path. Measured and
+# reverted.
+#
+# Ruled out: repo size (a fresh 1-file repo in %TEMP% costs the same), the
+# junctions, the chained git-config includes (empty GIT_CONFIG_GLOBAL changes
+# nothing), and slow file I/O (50 reads of .git/HEAD take 8ms total).
+#
+# The only ways to actually remove it are to drop $git_branch/$git_status from
+# the format below - losing branch display - or to find why starship's repo
+# open is ~150ms here when git.exe itself resolves HEAD in ~50ms.
+
 [character] # The name of the module we are configuring is 'character'
 success_symbol = '[λ](bold fg:#db7e41)' # The 'success_symbol' segment is being set to '➜' with the color 'bold green'
 

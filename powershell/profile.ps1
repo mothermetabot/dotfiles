@@ -1,6 +1,14 @@
 # PowerShell profile. Dot-sourced by a one-line stub at $PROFILE that
 # bootstrap.ps1 generates; this file is never linked or copied, so an editor
 # saving over it cannot break the connection the way a hardlink could.
+#
+# Startup budget, measured medians on this machine:
+#   bare shell (-NoProfile) ....  128 ms
+#   this profile ............... ~250 ms
+#   before the perf pass ....... ~900 ms
+#
+# What was removed to get there, and why, is noted inline. Keep new work out of
+# the startup path: prefer a lazy stub or a cached init over an import.
 
 $DotfilesRoot = Split-Path -Parent $PSScriptRoot
 
@@ -11,22 +19,7 @@ $DotfilesRoot = Split-Path -Parent $PSScriptRoot
 # This has to happen before functions/ is dot-sourced: PowerShell resolves
 # aliases BEFORE functions, so `function cat { bat ... }` alone is silently
 # ignored while the built-in Get-Content alias still exists.
-foreach ($a in 'rm', 'gl', 'cat') {
-    if (Test-Path "Alias:$a") { Remove-Item "Alias:$a" -Force -ErrorAction SilentlyContinue }
-}
-
-# --- git quality of life ------------------------------------------------------
-# Imported BEFORE functions/ on purpose: GG exports `gl` and `gs`, and the
-# repo's own definitions in functions/git-shortcuts.ps1 should win. Swap these
-# two blocks to prefer GG's versions instead.
-$ggModulePath = Join-Path $DotfilesRoot '..\src\gg\GG.psd1'
-if (Test-Path -LiteralPath $ggModulePath) { Import-Module $ggModulePath }
-Remove-Variable ggModulePath -ErrorAction SilentlyContinue
-
-# GG exports `gl` as an alias, which would still shadow the function below
-# since PowerShell resolves aliases first. Same for ga/gs if GG ever aliases
-# them too.
-foreach ($a in 'gl', 'gs', 'ga') {
+foreach ($a in 'rm', 'gl', 'cat', 'gs', 'ga') {
     if (Test-Path "Alias:$a") { Remove-Item "Alias:$a" -Force -ErrorAction SilentlyContinue }
 }
 
@@ -34,40 +27,58 @@ foreach ($a in 'gl', 'gs', 'ga') {
 Get-ChildItem -LiteralPath "$PSScriptRoot\functions" -Filter '*.ps1' -ErrorAction SilentlyContinue |
     ForEach-Object { . $_.FullName }
 
-# --- modules ------------------------------------------------------------------
-# PSFzf, for Ctrl+R history search only (~278ms).
+# --- git quality of life (lazy) -----------------------------------------------
+# Importing GG cost 137 ms on every shell start, and the only command it
+# uniquely provides is `gg` - its ga/gl/gs are overridden by
+# functions/git-shortcuts.ps1 anyway.
 #
-# A hand-rolled PSReadLine handler piping history into fzf was tried first. It
-# registered cleanly with zero errors but did nothing when pressed: fzf cannot
-# take over the console from inside a key handler while PSReadLine owns input.
-# Solving that is the entire reason PSFzf exists, so use it.
-#
-# Ctrl+T is then removed explicitly. PSFzf binds it on import, and passing an
-# empty -PSReadlineChordProvider does NOT unbind it. Ctrl+T is the psmux
-# prefix, and this binding is what silently swallowed it whenever psmux started
-# without its config.
-#
-# posh-git was dropped (~488ms): its git-aware prompt duplicated starship,
-# which already renders $git_branch and $git_status. Only its tab-completion
-# was unique, which is not worth half a second per shell.
-#
-# Measured medians: bare shell 180ms; profile was ~1755ms with both modules.
-if (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue) {
-    Set-PsFzfOption -PSReadlineChordReverseHistory 'Ctrl+r'
-    Remove-PSReadLineKeyHandler -Chord 'Ctrl+t' -ErrorAction SilentlyContinue
+# So `gg` is a stub that loads the module on first use, then re-applies the
+# repo's own definitions (Import-Module would otherwise shadow them) and
+# forwards the call.
+$script:GGModulePath = Join-Path $DotfilesRoot '..\src\gg\GG.psd1'
+if (Test-Path -LiteralPath $script:GGModulePath) {
+    function gg {
+        Remove-Item function:gg -Force -ErrorAction SilentlyContinue
+        Import-Module $script:GGModulePath -Force
+
+        # GG re-exports ga/gl/gs; put ours back on top.
+        . "$PSScriptRoot\functions\git-shortcuts.ps1"
+        foreach ($a in 'gl', 'gs', 'ga') {
+            if (Test-Path "Alias:$a") { Remove-Item "Alias:$a" -Force -ErrorAction SilentlyContinue }
+        }
+
+        & (Get-Command gg -CommandType Function, Cmdlet, Alias | Select-Object -First 1) @args
+    }
 }
 
+# --- modules ------------------------------------------------------------------
+# None, deliberately.
+#
+#   PSFzf     (~278ms + 43ms of option calls) - replaced by
+#             functions/fzf-history.ps1, which does the same fzf Ctrl+R in ~25
+#             lines. It also bound Ctrl+T, the psmux prefix, and silently
+#             swallowed it whenever psmux started without its config.
+#   posh-git  (~488ms) - its git-aware prompt duplicated starship, which
+#             already renders $git_branch and $git_status. Only tab-completion
+#             was unique, which is not worth half a second per shell.
+
 # --- prompt and navigation ----------------------------------------------------
-# Both of these were previously pasted in as generated output - 130 lines of
-# zoxide init frozen at whatever version generated it. Generating at startup
-# keeps them current.
-if (Get-Command starship -ErrorAction SilentlyContinue) {
-    Invoke-Expression (&starship init powershell)
-}
-if (Get-Command zoxide -ErrorAction SilentlyContinue) {
-    # --cmd c => `c` to jump, `ci` to pick interactively.
-    Invoke-Expression (& { (zoxide init powershell --cmd c | Out-String) })
-}
+# Both inits are cached (see functions/init-cache.ps1): they spawn the tool to
+# print a script that only changes on upgrade. starship additionally gets its
+# scoop shim unwrapped, because the path it bakes into the prompt is invoked on
+# every single Enter.
+Use-CachedInit -Name 'starship' -Command 'starship' `
+    -Arguments @('init', 'powershell', '--print-full-init') `
+    -Transform {
+        param($s)
+        $shim = (Get-Command starship -CommandType Application | Select-Object -First 1).Source
+        $real = Resolve-ScoopShim $shim
+        if ($real -ne $shim) { $s = $s.Replace($shim, $real) }
+        $s
+    }
+
+# --cmd c => `c` to jump, `ci` to pick interactively.
+Use-CachedInit -Name 'zoxide' -Command 'zoxide' -Arguments @('init', 'powershell', '--cmd', 'c')
 
 # --- psmux -------------------------------------------------------------------
 # psmux does not follow tmux's XDG search, so it needs this to find the shared
