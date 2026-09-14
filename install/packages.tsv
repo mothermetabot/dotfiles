@@ -1,0 +1,67 @@
+# Package manifest, shared by bootstrap.ps1 (scoop) and bootstrap.sh (brew/distro).
+#
+# Columns are TAB separated:
+#   name     logical name, used in messages only
+#   scoop    scoop identifier (bucket/package), or - if unavailable on Windows
+#   brew     homebrew formula, or - if unavailable / not appropriate via brew
+#   linux    distro package name (pacman/apt), or - if not applicable
+#
+# Homebrew on Linux does NOT ship GUI/WM/font packages, so anything that talks
+# to the display server (i3, fonts, terminal) has to come from the distro.
+# That is why brew and linux are separate columns rather than one "unix" column.
+#
+# name	scoop	brew	linux
+
+# --- core CLI, both platforms -----------------------------------------------
+git	main/git	git	git
+neovim	main/neovim	neovim	neovim
+ripgrep	main/ripgrep	ripgrep	ripgrep
+fd	main/fd	fd	fd
+fzf	main/fzf	fzf	fzf
+zoxide	main/zoxide	zoxide	zoxide
+starship	main/starship	starship	starship
+lazygit	extras/lazygit	lazygit	lazygit
+uv	main/uv	uv	uv
+jq	main/jq	jq	jq
+curl	main/curl	curl	curl
+tree-sitter	main/tree-sitter	tree-sitter	tree-sitter-cli
+nodejs	main/nodejs	node	nodejs
+rustup	main/rustup	rustup-init	rustup
+mdcat	pawelb0/mdcat-ng	mdcat	mdcat
+
+# --- language servers / debug adapters used by .config/nvim ------------------
+# lua-language-server is referenced by nvim/lua/lsp.lua
+lua-language-server	main/lua-language-server	lua-language-server	lua-language-server
+rust-analyzer	main/rust-analyzer	rust-analyzer	rust-analyzer
+# netcoredbg is referenced by nvim/lua/dap_config.lua (C# debugging)
+netcoredbg	main/netcoredbg	-	-
+
+# --- scoop plumbing, Windows only -------------------------------------------
+# These exist to stop scoop prompting mid-install for shared dependencies.
+7zip	main/7zip	-	-
+aria2	main/aria2	-	-
+coreutils	main/coreutils	coreutils	coreutils
+which	main/which	-	-
+winget	main/winget	-	-
+
+# --- multiplexer -------------------------------------------------------------
+# psmux is the Windows tmux; it reads the same tmux.conf (different plugin tail).
+psmux	main/psmux	-	-
+tmux	-	tmux	tmux
+
+# --- window manager ----------------------------------------------------------
+komorebi	extras/komorebi	-	-
+whkd	extras/whkd	-	-
+i3	-	-	i3-wm
+i3status	-	-	i3status
+rofi	-	-	rofi
+
+# --- misc --------------------------------------------------------------------
+flameshot	extras/flameshot	-	flameshot
+# stow deploys the packages on Linux; Windows uses bootstrap.ps1 junctions.
+stow	-	stow	stow
+
+# --- fonts -------------------------------------------------------------------
+# Windows: scoop nerd-fonts bucket, per-user install, no admin.
+# Linux:   brew/distro do not ship Nerd Fonts; bootstrap.sh uses getnf instead.
+CommitMono-NF-Mono	nerd-fonts/CommitMono-NF-Mono	-	-

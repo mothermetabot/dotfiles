@@ -1,1 +1,42 @@
-github-copilot
+# Config directories are junctioned into $XDG_CONFIG_HOME, so anything a tool
+# writes into its own config dir lands here. Everything below was previously
+# tracked by accident for exactly that reason.
+
+# --- machine-local overrides (never tracked) ---------------------------------
+*.local
+*.pre-dotfiles
+.bashrc.local
+.bash_profile.local
+git/.config/git/config.local
+powershell/profile.local.ps1
+
+# --- tool-written state ------------------------------------------------------
+# nvim writes logs next to its config
+**/.nvimlog
+**/startup.log
+nvim/.config/nvim/.claude/
+nvim/.config/nvim/doc/tags
+
+# scoop and uv drop receipts/timestamps into XDG config
+**/scoop/config.json
+**/uv/uv-receipt.json
+
+# gitk window geometry
+**/git/gitk
+**/git/gitk.bak
+
+# --- vendored upstream data, fetched by bootstrap ----------------------------
+# 62 KB / 3263 lines of third-party rules. komorebi regenerates it with
+# `komorebic fetch-app-specific-configuration`; bootstrap.ps1 does that for you.
+komorebi/applications.json
+
+# --- tmux/psmux plugin managers install into the config dir ------------------
+tmux/.config/tmux/plugins/
+tmux/.config/tmux/plugins.conf
+
+# --- editors / OS ------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
