@@ -53,8 +53,11 @@ variable = 'STARSHIP_GIT_BRANCH'
 format = 'on [ $env_value](bold purple) '
 
 [character]
+# Success and error differ in SHAPE, not just colour, so a failed command is
+# still obvious in monochrome, in a screenshot, or to colourblind eyes.
+# ϟ is Greek koppa; it reads as a lightning bolt against λ's calm.
 success_symbol = '[λ](bold fg:#db7e41)'
-error_symbol = '[λ](bold red)'
+error_symbol = '[ϟ](bold red)'
 
 # Explicitly off. Not needed on a desktop, and battery polling showed 10-12ms.
 [battery]
