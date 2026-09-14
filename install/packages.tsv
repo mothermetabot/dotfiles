@@ -50,9 +50,14 @@ which	main/which	-	-
 winget	main/winget	-	-
 
 # --- multiplexer -------------------------------------------------------------
-# psmux is the Windows tmux; it reads the same tmux.conf (different plugin tail).
+# psmux is the Windows tmux; it reads the same tmux.conf (if-shell branches on
+# the platform, see .config/tmux/tmux.conf).
 psmux	main/psmux	-	-
 tmux	-	tmux	tmux
+# PowerShell 7. Required by psmux's plugin manager (PPM), whose Prefix+I/U/M
+# bindings and background pollers all shell out to `pwsh` - they fail silently
+# with "cannot find the file specified" when only Windows PowerShell 5.1 exists.
+pwsh	main/pwsh	-	-
 
 # --- window manager ----------------------------------------------------------
 komorebi	extras/komorebi	-	-
