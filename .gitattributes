@@ -1,0 +1,32 @@
+# core.autocrlf is true on the Windows box, which would check these out with
+# CRLF. A shell script with CRLF line endings fails on Linux with a confusing
+# "bad interpreter: /bin/bash^M", and tmux/starship/git configs with CRLF are
+# parsed inconsistently. Pin everything that Linux reads to LF.
+
+* text=auto
+
+# Shell scripts must be LF or the shebang breaks.
+*.sh            text eol=lf
+.bashrc         text eol=lf
+.bash_profile   text eol=lf
+bash/*          text eol=lf
+
+# Configs read by Unix tools.
+*.toml          text eol=lf
+*.conf          text eol=lf
+*.lua           text eol=lf
+*.tsv           text eol=lf
+*.json          text eol=lf
+whkdrc          text eol=lf
+i3/*            text eol=lf
+
+# PowerShell is Windows-only and is happy either way; CRLF keeps diffs clean
+# against anything Windows tooling rewrites.
+*.ps1           text eol=crlf
+
+# Never touch binaries.
+*.ttf           binary
+*.otf           binary
+*.png           binary
+*.jpeg          binary
+*.jpg           binary

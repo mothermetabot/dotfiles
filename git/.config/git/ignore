@@ -1,0 +1,6 @@
+# Global gitignore ($XDG_CONFIG_HOME/git/ignore).
+# Applies to every repo on this machine, so keep it to things that are never
+# worth tracking anywhere rather than project-specific patterns.
+
+# Agent scratch settings, per-machine by definition.
+**/.claude/settings.local.json

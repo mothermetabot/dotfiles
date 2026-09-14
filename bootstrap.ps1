@@ -65,10 +65,9 @@ function Write-Plan($m) { Write-Host "  ? $m" -ForegroundColor Magenta;  $script
 # the only link type available unprivileged, which is fine: every one of these
 # is a directory.
 $Junctions = @(
-    @{ Name = 'nvim';     Link = "$Xdg\nvim";     Target = "$Repo\nvim\.config\nvim"         }
-    @{ Name = 'nvim_oil'; Link = "$Xdg\nvim_oil"; Target = "$Repo\nvim-oil\.config\nvim_oil" }
-    @{ Name = 'tmux';     Link = "$Xdg\tmux";     Target = "$Repo\tmux\.config\tmux"         }
-    @{ Name = 'git';      Link = "$Xdg\git";      Target = "$Repo\git\.config\git"           }
+    @{ Name = 'nvim'; Link = "$Xdg\nvim"; Target = "$Repo\nvim\.config\nvim" }
+    @{ Name = 'tmux'; Link = "$Xdg\tmux"; Target = "$Repo\tmux\.config\tmux" }
+    @{ Name = 'git';  Link = "$Xdg\git";  Target = "$Repo\git\.config\git"   }
 )
 
 # User-scope environment. Machine scope is never used: these are per-user tools,
