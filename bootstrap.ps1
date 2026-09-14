@@ -255,7 +255,10 @@ if ($SkipPackages) {
         } |
         Where-Object { $_.Scoop -and $_.Scoop -ne '-' }
 
-    $buckets = @($rows | ForEach-Object { ($_.Scoop -split '/')[0] } | Sort-Object -Unique)
+    # `local:` entries are manifests in this repo, not bucket/package ids.
+    $buckets = @($rows |
+        Where-Object { -not $_.Scoop.StartsWith('local:') } |
+        ForEach-Object { ($_.Scoop -split '/')[0] } | Sort-Object -Unique)
     $have    = @(scoop bucket list 6>$null | ForEach-Object { $_.Name })
 
     foreach ($b in $buckets) {
@@ -268,15 +271,28 @@ if ($SkipPackages) {
 
     $installed = @(scoop list 6>$null | ForEach-Object { $_.Name })
     foreach ($r in $rows) {
-        $short = ($r.Scoop -split '/')[-1]
+        # local:install/scoop/gg.json -> install name 'gg', path under $Repo
+        if ($r.Scoop.StartsWith('local:')) {
+            # Forward slashes are fine on Windows; no separator rewrite needed.
+            $rel   = $r.Scoop.Substring(6)
+            $spec  = Join-Path $Repo $rel
+            $short = [System.IO.Path]::GetFileNameWithoutExtension($spec)
+            if (-not [System.IO.File]::Exists($spec)) {
+                Write-Warn "$($r.Name): manifest missing at $spec"
+                continue
+            }
+        } else {
+            $spec  = $r.Scoop
+            $short = ($r.Scoop -split '/')[-1]
+        }
         if ($installed -contains $short) { Write-Skip "$($r.Name)"; continue }
-        if ($DryRun) { Write-Plan "would install $($r.Scoop)"; continue }
-        scoop install $r.Scoop
+        if ($DryRun) { Write-Plan "would install $spec"; continue }
+        scoop install $spec
         # Deliberately non-fatal: one unavailable manifest must not abort the
         # whole bootstrap. bootstrap.bat pretended to be fatal here but its
         # helper always returned 0, so all 22 error handlers were dead code.
-        if ($LASTEXITCODE -ne 0) { Write-Warn "could not install $($r.Scoop)"; continue }
-        Write-Do "installed $($r.Scoop)"
+        if ($LASTEXITCODE -ne 0) { Write-Warn "could not install $spec"; continue }
+        Write-Do "installed $spec"
     }
 }
 

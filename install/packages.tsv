@@ -6,6 +6,10 @@
 #   brew     homebrew formula, or - if unavailable / not appropriate via brew
 #   linux    distro package name (pacman/apt), or - if not applicable
 #
+# A `local:` prefix in the scoop or brew column means a manifest kept in this
+# repo, resolved relative to the repo root. That covers tools published only as
+# GitHub releases, with no bucket or tap of their own.
+#
 # Homebrew on Linux does NOT ship GUI/WM/font packages, so anything that talks
 # to the display server (i3, fonts, terminal) has to come from the distro.
 # That is why brew and linux are separate columns rather than one "unix" column.
@@ -83,6 +87,13 @@ kitty	-	kitty	kitty
 xclip	-	-	xclip
 
 # --- misc --------------------------------------------------------------------
+# gg: fzf-driven git helper, published as GitHub releases with no bucket/tap.
+# Manifests live in install/scoop/gg.json and install/brew/gg.rb; both pin the
+# release sha256, so bump the version AND the hash together.
+#
+# The release also ships nvim/lua/gg_pr/ (the PR picker's Neovim half). Neither
+# manifest wires it into .config/nvim - point your loader at it if you want it.
+gg	local:install/scoop/gg.json	local:install/brew/gg.rb	-
 flameshot	extras/flameshot	-	flameshot
 # stow deploys the packages on Linux; Windows uses bootstrap.ps1 junctions.
 stow	-	stow	stow

@@ -1,0 +1,29 @@
+{
+    "version": "0.1.1",
+    "description": "An fzf-driven git helper: branches, changes, stashes, worktrees, commits and pull requests, each behind one picker",
+    "homepage": "https://github.com/mothermetabot/gg",
+    "license": "MIT",
+    "architecture": {
+        "64bit": {
+            "url": "https://github.com/mothermetabot/gg/releases/download/v0.1.1/gg-0.1.1-x86_64-pc-windows-msvc.zip",
+            "hash": "e685600285cf0474c8b2a2bf17ab0e5852566e8c6ca12a0aab6da50e23625882"
+        }
+    },
+    "bin": "gg.exe",
+    "notes": [
+        "The archive also ships nvim/lua/gg_pr/ - the Neovim side of the PR",
+        "picker. It is NOT wired into .config/nvim automatically; point",
+        "vim.pack or your loader at the scoop app dir if you want it:",
+        "  $env:USERPROFILE\\scoop\\apps\\gg\\current\\nvim"
+    ],
+    "checkver": {
+        "github": "https://github.com/mothermetabot/gg"
+    },
+    "autoupdate": {
+        "architecture": {
+            "64bit": {
+                "url": "https://github.com/mothermetabot/gg/releases/download/v$version/gg-$version-x86_64-pc-windows-msvc.zip"
+            }
+        }
+    }
+}

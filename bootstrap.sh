@@ -74,12 +74,16 @@ if [ "$SKIP_PACKAGES" = 1 ]; then
   skip 'skipped (--no-packages)'
 else
   # Column 3 = brew, column 4 = distro. '-' means not available there.
-  mapfile -t brew_pkgs < <(awk -F'\t' '!/^#/ && NF>=3 && $3!="-" && $3!="" {print $3}' "$REPO/install/packages.tsv")
+  # A `local:` prefix in the brew column is a formula kept in this repo rather
+  # than a name in a tap, so it is collected separately.
+  mapfile -t brew_pkgs   < <(awk -F'\t' '!/^#/ && NF>=3 && $3!="-" && $3!="" && $3 !~ /^local:/ {print $3}' "$REPO/install/packages.tsv")
+  mapfile -t brew_local  < <(awk -F'\t' '!/^#/ && NF>=3 && $3 ~ /^local:/ {sub(/^local:/,"",$3); print $3}' "$REPO/install/packages.tsv")
   mapfile -t distro_pkgs < <(awk -F'\t' '!/^#/ && NF>=4 && $4!="-" && $4!="" {print $4}' "$REPO/install/packages.tsv")
 
   if [ "$DRY_RUN" = 1 ]; then
     plan "would install via $PM: ${distro_pkgs[*]}"
     plan "would install via brew: ${brew_pkgs[*]}"
+    [ ${#brew_local[@]} -gt 0 ] && plan "would install local formulae: ${brew_local[*]}"
   else
     # stow and git are needed by this script itself, so they go first.
     distro_install stow git
@@ -92,6 +96,14 @@ else
     else
       brew install "${brew_pkgs[@]}"
       did "brew packages (${#brew_pkgs[@]})"
+      # Local formulae: a path avoids needing a tap of our own.
+      for f in "${brew_local[@]}"; do
+        if [ -r "$REPO/$f" ]; then
+          brew install --formula "$REPO/$f" && did "brew local: $f"
+        else
+          warn "local formula missing: $REPO/$f"
+        fi
+      done
     fi
   fi
 fi
