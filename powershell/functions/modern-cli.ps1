@@ -1,34 +1,42 @@
-# Modern replacements for ls and cat, matching the aliases in .bashrc.
+# cat -> bat, plus the listing helpers.
 #
 # Defined as functions rather than Set-Alias because aliases cannot carry
-# default arguments, and `ls`/`cat` need flags to behave sensibly. Each falls
-# back to the PowerShell built-in when the tool is missing, so a machine that
-# has not run bootstrap yet still works.
-
-if (Get-Command eza -ErrorAction SilentlyContinue) {
-    function ls  { eza --group-directories-first @args }
-    function l   { eza --group-directories-first --long --git @args }
-    function la  { eza --group-directories-first --long --git --all @args }
-    function lt  { eza --group-directories-first --tree --level=2 @args }
-
-    # ll: the -afGH combination, as requested.
-    #
-    # CAVEAT: -f in eza is --only-files, which HIDES directories - it is not
-    # GNU ls's -f (do not sort). -H (--links) and -G (--grid) also only render
-    # meaningfully in long mode. If what you wanted was the old
-    # `ls -lafg` listing, use `la` above, or change this to -laGH.
-    function ll { eza -afGH @args }
-} else {
-    function ls { Get-ChildItem @args }
-    function ll { Get-ChildItem -Force @args }
-}
+# default arguments. Each falls back to the PowerShell built-in when the tool
+# is missing, so a machine that has not run bootstrap yet still works.
+#
+# eza was tried and dropped: the scoop build (GNU target, 0.23.5) HANGS on any
+# directory listing on this machine - reproduced from PowerShell, cmd.exe and a
+# redirected process, while `eza --version` returned fine. Aliasing `ls` to a
+# binary that never returns is worse than the built-in.
 
 if (Get-Command bat -ErrorAction SilentlyContinue) {
-    # --paging=never keeps `cat` behaving like cat in pipelines rather than
-    # opening a pager and blocking.
+    # --paging=never keeps `cat` usable in pipelines rather than opening a
+    # pager and blocking.
     function cat { bat --paging=never @args }
     # `batp` when you actually do want the pager.
     function batp { bat @args }
 } else {
     function cat { Get-Content @args }
 }
+
+# GNU ls-style long listing, matching `ll` in .bashrc.
+function ll {
+    param(
+        [string]$Path = '.',
+        [switch]$Force
+    )
+
+    $dirParams = @{ Path = $Path }
+    if ($Force) { $dirParams.Force = $true }
+
+    Get-ChildItem @dirParams |
+        Select-Object `
+            @{ Name = 'Size'; Expression = {
+                if ($_.PSIsContainer) { '<DIR>' }
+                else { '{0,10:N0}' -f $_.Length }
+            }},
+            @{ Name = 'LastWriteTime'; Expression = { $_.LastWriteTime } },
+            @{ Name = 'Name';          Expression = { $_.Name } }
+}
+
+function la { ll -Force @args }

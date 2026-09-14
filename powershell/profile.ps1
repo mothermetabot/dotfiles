@@ -5,13 +5,13 @@
 $DotfilesRoot = Split-Path -Parent $PSScriptRoot
 
 # --- aliases that shadow real tools ------------------------------------------
-# PowerShell ships aliases for ls/rm/gl/cat that mask the actual executables and
-# the functions below.
+# PowerShell ships aliases for rm/gl/cat that mask the actual executables and
+# the functions below. `ls` keeps its built-in alias: eza is not used.
 #
 # This has to happen before functions/ is dot-sourced: PowerShell resolves
 # aliases BEFORE functions, so `function cat { bat ... }` alone is silently
 # ignored while the built-in Get-Content alias still exists.
-foreach ($a in 'ls', 'rm', 'gl', 'cat') {
+foreach ($a in 'rm', 'gl', 'cat') {
     if (Test-Path "Alias:$a") { Remove-Item "Alias:$a" -Force -ErrorAction SilentlyContinue }
 }
 
@@ -37,9 +37,9 @@ Get-ChildItem -LiteralPath "$PSScriptRoot\functions" -Filter '*.ps1' -ErrorActio
 # --- modules ------------------------------------------------------------------
 # None. Both that used to load here are gone, for ~766ms off every shell start:
 #
-#   PSFzf     (~278ms) - atuin owns Ctrl+R now, and PSFzf's Ctrl+T collided
-#                        with the psmux prefix, silently hijacking it whenever
-#                        psmux started without its config.
+#   PSFzf     (~278ms) - Ctrl+R is handled by functions/fzf-history.ps1 using
+#                        plain fzf, and PSFzf's Ctrl+T collided with the psmux
+#                        prefix, silently hijacking it.
 #   posh-git  (~488ms) - its git-aware prompt duplicated starship, which
 #                        already renders $git_branch and $git_status. Only its
 #                        tab-completion was unique, which is not worth half a
@@ -57,17 +57,6 @@ if (Get-Command starship -ErrorAction SilentlyContinue) {
 if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     # --cmd c => `c` to jump, `ci` to pick interactively.
     Invoke-Expression (& { (zoxide init powershell --cmd c | Out-String) })
-}
-
-# atuin owns Ctrl+R; it replaced PSFzf entirely.
-#
-# atuin's PowerShell init hard-requires PSReadLine and writes an error without
-# it. PSReadLine is absent in non-interactive shells (powershell -Command ...),
-# so gate on it rather than emit noise in every script that starts a shell.
-if ((Get-Command atuin -ErrorAction SilentlyContinue) -and
-    (Get-Module -Name PSReadLine)) {
-    try { Invoke-Expression (& { (atuin init powershell | Out-String) }) }
-    catch { Write-Verbose "atuin init failed: $($_.Exception.Message)" }
 }
 
 # --- psmux -------------------------------------------------------------------

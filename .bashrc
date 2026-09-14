@@ -34,8 +34,8 @@ bind '"\C-n":menu-complete'
 bind '"\C-p":menu-complete-backward'
 
 # --- fuzzy history ------------------------------------------------------------
-# Superseded by atuin when installed (see the bottom of this file); kept as
-# the fallback for machines without it.
+# Ctrl+R through plain fzf. Mirrors powershell/functions/fzf-history.ps1;
+# no module, no daemon, no database.
 _fzf_history_widget() {
   local selected
   selected=$(
@@ -54,20 +54,12 @@ else
 fi
 
 # --- modern replacements ------------------------------------------------------
-# Mirrors powershell/functions/modern-cli.ps1. Each guarded so a machine that
-# has not run bootstrap yet still gets working ls/cat.
-if command -v eza >/dev/null 2>&1; then
-  alias ls='eza --group-directories-first'
-  alias l='eza --group-directories-first --long --git'
-  alias la='eza --group-directories-first --long --git --all'
-  alias lt='eza --group-directories-first --tree --level=2'
-  # CAVEAT: eza's -f is --only-files, which HIDES directories. It is not GNU
-  # ls's -f (do not sort). If you wanted the old `ls -lafg` listing, use `la`.
-  alias ll='eza -afGH'
-else
-  alias ls='ls --color=auto'
-  alias ll='ls -lafg --color=auto'
-fi
+# Mirrors powershell/functions/modern-cli.ps1. eza was tried and dropped: the
+# Windows build hangs on any listing, and keeping the two shells identical is
+# worth more than the colours.
+alias ls='ls --color=auto'
+alias ll='ls -lafg --color=auto'
+alias la='ls -lAh --color=auto'
 
 if command -v bat >/dev/null 2>&1; then
   # --paging=never so cat stays usable in pipelines instead of opening a pager.
@@ -150,11 +142,6 @@ n() { nvim .; }
 # --- prompt and navigation ----------------------------------------------------
 command -v starship >/dev/null 2>&1 && eval "$(starship init bash)"
 command -v zoxide   >/dev/null 2>&1 && eval "$(zoxide init bash --cmd c)"
-
-# atuin owns Ctrl+R when present, replacing _fzf_history_widget above.
-if command -v atuin >/dev/null 2>&1; then
-  eval "$(atuin init bash --disable-up-arrow)"
-fi
 
 # --- machine-local overrides --------------------------------------------------
 # Gitignored. Project shortcuts, proxies, credentials, uv's PATH shim.

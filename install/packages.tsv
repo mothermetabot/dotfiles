@@ -24,11 +24,12 @@ lazygit	extras/lazygit	lazygit	lazygit
 uv	main/uv	uv	uv
 jq	main/jq	jq	jq
 curl	main/curl	curl	curl
-# eza replaces ls, bat replaces cat; both aliased in .bashrc and the PS profile.
-eza	main/eza	eza	eza
+# bat replaces cat; aliased in .bashrc and the PS profile.
+#
+# eza and atuin were both tried and removed. eza's scoop build (GNU target)
+# hangs on any directory listing on Windows, and Ctrl+R history is handled by
+# plain fzf in both shells, which needs no daemon or database.
 bat	main/bat	bat	bat
-# atuin: shell history, owns Ctrl+R on both shells.
-atuin	main/atuin	atuin	atuin
 tree-sitter	main/tree-sitter	tree-sitter	tree-sitter-cli
 nodejs	main/nodejs	node	nodejs
 rustup	main/rustup	rustup-init	rustup
