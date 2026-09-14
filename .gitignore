@@ -11,9 +11,8 @@
 powershell/profile.local.ps1
 
 # --- generated per-platform, not tracked -------------------------------------
-# Nothing generated lives in this repo any more: the per-platform tmux entry
-# stubs are written to ~/.psmux.conf (Windows) and ~/.config/tmux/tmux.conf
-# (Linux) by the bootstraps. Only runtime plugin installs land here.
+# Nothing is generated any more - tmux.conf branches internally with if-shell.
+# Only runtime plugin installs land here (TPM on Linux).
 .config/tmux/plugins/
 
 # --- tool-written state ------------------------------------------------------

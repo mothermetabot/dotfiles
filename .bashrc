@@ -34,7 +34,8 @@ bind '"\C-n":menu-complete'
 bind '"\C-p":menu-complete-backward'
 
 # --- fuzzy history ------------------------------------------------------------
-# The PowerShell side gets this from PSFzf; bash needs it wired by hand.
+# Superseded by atuin when installed (see the bottom of this file); kept as
+# the fallback for machines without it.
 _fzf_history_widget() {
   local selected
   selected=$(

@@ -35,25 +35,17 @@ Get-ChildItem -LiteralPath "$PSScriptRoot\functions" -Filter '*.ps1' -ErrorActio
     ForEach-Object { . $_.FullName }
 
 # --- modules ------------------------------------------------------------------
-# Installed by bootstrap.ps1, not here: the old profile ran Install-Module
-# probes on every shell start.
+# None. Both that used to load here are gone, for ~766ms off every shell start:
 #
-# These two dominate startup. Medians over 5 runs on this machine:
+#   PSFzf     (~278ms) - atuin owns Ctrl+R now, and PSFzf's Ctrl+T collided
+#                        with the psmux prefix, silently hijacking it whenever
+#                        psmux started without its config.
+#   posh-git  (~488ms) - its git-aware prompt duplicated starship, which
+#                        already renders $git_branch and $git_status. Only its
+#                        tab-completion was unique, which is not worth half a
+#                        second per shell.
 #
-#   bare shell (-NoProfile) .......  180 ms
-#   profile without these two .....  845 ms
-#   + posh-git .................... +488 ms
-#   + PSFzf ....................... +278 ms
-#   full profile .................. 1755 ms
-#
-# Import-Module directly rather than guarding with Get-Module -ListAvailable,
-# which scans the whole module path a second time for no benefit.
-#
-# NOTE: posh-git's git-aware prompt is redundant with starship, which already
-# renders $git_branch and $git_status (see .config/starship.toml), so its 488ms
-# buys git tab-completion and nothing else. Delete the line to get it back.
-try { Import-Module PSFzf -ErrorAction Stop; Set-PsFzfOption -PSReadlineChordReverseHistory 'Ctrl+r' } catch { }
-try { Import-Module posh-git -ErrorAction Stop } catch { }
+# Measured medians: bare shell 180ms, full profile was ~1755ms with both.
 
 # --- prompt and navigation ----------------------------------------------------
 # Both of these were previously pasted in as generated output - 130 lines of
@@ -67,9 +59,7 @@ if (Get-Command zoxide -ErrorAction SilentlyContinue) {
     Invoke-Expression (& { (zoxide init powershell --cmd c | Out-String) })
 }
 
-# atuin replaces shell history search. Initialised AFTER PSFzf on purpose:
-# both bind Ctrl+R, and atuin should win. Remove the PSFzf import above if you
-# settle on atuin, since that is most of what PSFzf was doing here.
+# atuin owns Ctrl+R; it replaced PSFzf entirely.
 #
 # atuin's PowerShell init hard-requires PSReadLine and writes an error without
 # it. PSReadLine is absent in non-interactive shells (powershell -Command ...),
@@ -78,6 +68,18 @@ if ((Get-Command atuin -ErrorAction SilentlyContinue) -and
     (Get-Module -Name PSReadLine)) {
     try { Invoke-Expression (& { (atuin init powershell | Out-String) }) }
     catch { Write-Verbose "atuin init failed: $($_.Exception.Message)" }
+}
+
+# --- psmux -------------------------------------------------------------------
+# psmux does not follow tmux's XDG search, so it needs this to find the shared
+# .config/tmux/tmux.conf. bootstrap.ps1 also sets it at User scope, but that
+# only reaches processes started AFTER the registry change propagates - a
+# terminal opened beforehand launches psmux with stock defaults and no error.
+#
+# The failure is silent and confusing: prefix falls back to C-b, so Ctrl+T is
+# never captured and falls through to whatever the shell has bound.
+if (-not $env:PSMUX_CONFIG_FILE) {
+    $env:PSMUX_CONFIG_FILE = Join-Path $DotfilesRoot '.config\tmux\tmux.conf'
 }
 
 # --- machine-local overrides --------------------------------------------------

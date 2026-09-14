@@ -68,7 +68,7 @@ function Write-Plan($m) { Write-Host "  ? $m" -ForegroundColor Magenta;  $script
 # Directory junctions are the only link type available unprivileged, which is
 # fine here: loose FILES under .config/ (starship.toml) are not linked at all,
 # they are pointed at by an environment variable instead. See $EnvVars.
-$LinuxOnlyConfig = @('i3', 'i3status', 'sway', 'rofi')
+$LinuxOnlyConfig = @('i3', 'i3status', 'rofi')
 
 $Junctions = @(
     Get-ChildItem -LiteralPath "$Repo\.config" -Directory -ErrorAction SilentlyContinue |
@@ -144,7 +144,7 @@ $ProfileStubs = @(
     "$Target\Documents\PowerShell\Microsoft.PowerShell_profile.ps1"
 )
 
-$PSModules = @('PSFzf', 'posh-git')
+$PSModules = @()
 
 # =============================================================================
 # Helpers

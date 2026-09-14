@@ -27,7 +27,7 @@ curl	main/curl	curl	curl
 # eza replaces ls, bat replaces cat; both aliased in .bashrc and the PS profile.
 eza	main/eza	eza	eza
 bat	main/bat	bat	bat
-# atuin: shell history. Note it also binds Ctrl+R, overlapping PSFzf on Windows.
+# atuin: shell history, owns Ctrl+R on both shells.
 atuin	main/atuin	atuin	atuin
 tree-sitter	main/tree-sitter	tree-sitter	tree-sitter-cli
 nodejs	main/nodejs	node	nodejs
@@ -69,7 +69,7 @@ rofi	-	-	rofi
 # this is the one tool with no cross-platform counterpart. Change it here and in
 # `set $term` at the top of .config/i3/config together.
 kitty	-	kitty	kitty
-# xclip is the X11 clipboard helper that .config/tmux/plugins.linux.conf falls
+# xclip is the X11 clipboard helper that .config/tmux/tmux.linux.conf falls
 # back to when wl-copy (Wayland) is unavailable.
 xclip	-	-	xclip
 
