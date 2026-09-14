@@ -1,45 +1,59 @@
-# Get editor completions based on the config schema
 "$schema" = 'https://starship.rs/config-schema.json'
 
-# Inserts a blank line between shell prompts
+# =============================================================================
+# PERFORMANCE NOTES - read before adding anything here
+# =============================================================================
+#
+# Measured on this machine with `starship timings` and wall-clock medians:
+#
+#   spawn floor (cmd /c exit) ..........   9 ms
+#   starship --version .................  19 ms
+#   THIS config, in a git repo .........  ~20 ms
+#   ...with any starship git module .... ~147 ms
+#
+# Two rules keep it there:
+#
+# 1. NO starship git modules. The cost is not the branch lookup, it is
+#    starship OPENING the repository - so a single git module pays the whole
+#    ~130ms, and adding more costs nothing extra. `directory` also opens the
+#    repo when truncate_to_repo is on (its default), which is why it showed as
+#    143-215ms in timings; the bigger the repo, the worse.
+#
+#    The branch is still displayed. powershell/functions/git-branch-fast.ps1
+#    reads .git/HEAD directly - 0.16ms - and publishes it as
+#    $STARSHIP_GIT_BRANCH, which the [env_var] module below renders without
+#    touching git at all.
+#
+# 2. `format` MUST stay above every [table]. In TOML a bare key after a table
+#    header belongs to THAT table, so this file previously had `format` sitting
+#    under [git_status] - it became git_status.format, the root format was
+#    never applied, and the prompt silently used starship's default (which runs
+#    every git module). That single misplacement was most of the slowness.
+#
+# `starship timings` lists EVERY module, not just the ones in the format, so
+# entries there for modules you do not use (battery, pijul_channel, ...) are
+# not evidence they run.
+
 add_newline = false
 
-# Replace the '❯' symbol in the prompt with '➜'
-# PERF NOTE - do not "fix" this with truncate_to_repo = false.
-#
-# In a git repo this prompt costs ~175ms, and `starship timings` blames
-# whichever module opens the repo FIRST:
-#
-#   truncate_to_repo = true    directory 153ms, git_branch <1ms  -> 185ms total
-#   truncate_to_repo = false   directory  <1ms, git_branch 142ms -> 198ms total
-#
-# The cost is starship's repo-open, not path truncation, so turning truncation
-# off just moves it to git_branch and loses the nicer path. Measured and
-# reverted.
-#
-# Ruled out: repo size (a fresh 1-file repo in %TEMP% costs the same), the
-# junctions, the chained git-config includes (empty GIT_CONFIG_GLOBAL changes
-# nothing), and slow file I/O (50 reads of .git/HEAD take 8ms total).
-#
-# The only ways to actually remove it are to drop $git_branch/$git_status from
-# the format below - losing branch display - or to find why starship's repo
-# open is ~150ms here when git.exe itself resolves HEAD in ~50ms.
+format = "$directory${env_var.git_branch}$character"
 
-[character] # The name of the module we are configuring is 'character'
-success_symbol = '[λ](bold fg:#db7e41)' # The 'success_symbol' segment is being set to '➜' with the color 'bold green'
+# =============================================================================
 
-[git_status]
-ahead = '⇡${count}'
-diverged = '⇕⇡${ahead_count}⇣${behind_count}'
-behind = '⇣${count}'
+[directory]
+# Off because it makes directory open the git repo just to find the root.
+truncate_to_repo = false
+truncation_length = 3
 
-format = """
-$username\
-$hostname\
-$directory\
-$git_branch\
-$git_commit\
-$git_state\
-$git_metrics\
-$git_status\
-$character"""
+# Branch from $STARSHIP_GIT_BRANCH, set by git-branch-fast.ps1. No repo access.
+[env_var.git_branch]
+variable = 'STARSHIP_GIT_BRANCH'
+format = 'on [ $env_value](bold purple) '
+
+[character]
+success_symbol = '[λ](bold fg:#db7e41)'
+error_symbol = '[λ](bold red)'
+
+# Explicitly off. Not needed on a desktop, and battery polling showed 10-12ms.
+[battery]
+disabled = true
