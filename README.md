@@ -131,8 +131,19 @@ wires `y`/`Enter` to `wl-copy` or `xclip` by hand.
 CRLF and break its shebang on Linux (`bad interpreter: /bin/bash^M`).
 `.gitattributes` pins shell scripts and Unix-read configs to LF.
 
-## Recovery
+## Branches
 
-Tags: `pre-cleanup` (state before the restructure), `abandoned/arch` and
-`abandoned/master` (the retired branches, kept in case anything is worth
-reviving).
+`main` is the only branch, and carries both platforms. Per-OS branches were
+tried and abandoned: they diverged on files that have nothing to do with the
+operating system (the Neovim config had been rewritten on one side only), so
+every shared improvement needed cherry-picking by hand. Platform differences
+belong in the two bootstrap scripts and in `has('win32')`-style guards, not in
+parallel histories.
+
+Recovery tags, in case anything on the old branches is worth reviving:
+
+| Tag | What it holds |
+|---|---|
+| `pre-cleanup` | this repo immediately before the restructure |
+| `abandoned/arch` | the Arch/sway branch |
+| `abandoned/master` | the previous trunk |
