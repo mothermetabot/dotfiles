@@ -35,17 +35,27 @@ Get-ChildItem -LiteralPath "$PSScriptRoot\functions" -Filter '*.ps1' -ErrorActio
     ForEach-Object { . $_.FullName }
 
 # --- modules ------------------------------------------------------------------
-# None. Both that used to load here are gone, for ~766ms off every shell start:
+# PSFzf, for Ctrl+R history search only (~278ms).
 #
-#   PSFzf     (~278ms) - Ctrl+R is handled by functions/fzf-history.ps1 using
-#                        plain fzf, and PSFzf's Ctrl+T collided with the psmux
-#                        prefix, silently hijacking it.
-#   posh-git  (~488ms) - its git-aware prompt duplicated starship, which
-#                        already renders $git_branch and $git_status. Only its
-#                        tab-completion was unique, which is not worth half a
-#                        second per shell.
+# A hand-rolled PSReadLine handler piping history into fzf was tried first. It
+# registered cleanly with zero errors but did nothing when pressed: fzf cannot
+# take over the console from inside a key handler while PSReadLine owns input.
+# Solving that is the entire reason PSFzf exists, so use it.
 #
-# Measured medians: bare shell 180ms, full profile was ~1755ms with both.
+# Ctrl+T is then removed explicitly. PSFzf binds it on import, and passing an
+# empty -PSReadlineChordProvider does NOT unbind it. Ctrl+T is the psmux
+# prefix, and this binding is what silently swallowed it whenever psmux started
+# without its config.
+#
+# posh-git was dropped (~488ms): its git-aware prompt duplicated starship,
+# which already renders $git_branch and $git_status. Only its tab-completion
+# was unique, which is not worth half a second per shell.
+#
+# Measured medians: bare shell 180ms; profile was ~1755ms with both modules.
+if (Get-Command Set-PsFzfOption -ErrorAction SilentlyContinue) {
+    Set-PsFzfOption -PSReadlineChordReverseHistory 'Ctrl+r'
+    Remove-PSReadLineKeyHandler -Chord 'Ctrl+t' -ErrorAction SilentlyContinue
+}
 
 # --- prompt and navigation ----------------------------------------------------
 # Both of these were previously pasted in as generated output - 130 lines of
