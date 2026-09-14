@@ -7,6 +7,8 @@
 
 # Shell scripts must be LF or the shebang breaks.
 *.sh            text eol=lf
+# Homebrew formulae are read by Ruby on Linux.
+*.rb            text eol=lf
 .bashrc         text eol=lf
 .bash_profile   text eol=lf
 bash/*          text eol=lf
