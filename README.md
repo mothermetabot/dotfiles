@@ -9,7 +9,7 @@ deployed by `stow` on Linux and by junctions + environment variables on Windows.
 │   ├── git/             config (tracked) + config.local (gitignored)
 │   ├── nvim/            Neovim 0.12, vim.pack + a small lazy-loading harness
 │   ├── tmux/            shared conf; plugin tail swapped per platform
-│   └── starship.toml    reached by $STARSHIP_CONFIG, not linked
+│   └── prompt/          native prompt, sourced by both shells
 ├── .bashrc              Linux shell
 ├── .bash_profile
 ├── powershell/          Windows shell; dot-sourced by a stub at $PROFILE
@@ -64,7 +64,7 @@ they're reached by environment variable instead:
 | Thing | How it's found |
 |---|---|
 | `.config/*/` | junction into `%USERPROFILE%\.config` |
-| `.config/starship.toml` | `$STARSHIP_CONFIG` |
+| `.config/prompt/` | sourced directly by each shell's rc |
 | `komorebi/` | `$KOMOREBI_CONFIG_HOME`, `$WHKD_CONFIG_HOME` |
 | `powershell/profile.ps1` | one-line stub at `$PROFILE` that dot-sources it |
 | `.config/git/config` | `$XDG_CONFIG_HOME` **and** an include stub at `~/.gitconfig` |
@@ -115,15 +115,36 @@ bootstrap.ps1 fetches it.
 
 ## tmux / psmux
 
-psmux reads the same `tmux.conf` as tmux, so the 219 shared lines are one file.
-Only the plugin tail differs, and the bootstraps select it by copying
-`plugins.{windows,linux}.conf` to the gitignored `plugins.conf`. The split is a
-file swap rather than an `if-shell` so it doesn't depend on psmux implementing
-that command.
+psmux reads the same `tmux.conf` as tmux. The platform split is a single `%if`
+at the bottom of that file, keyed on `#{socket_path}` — a drive-letter path on
+Windows, under `/tmp` on Linux. `%if` is evaluated internally, unlike
+`if-shell`, which spawns a shell per call: eight of those were 94% of psmux
+startup (4224 ms → 197 ms once removed).
 
-One asymmetry worth knowing: psmux copies to the system clipboard natively, so
-its plugin file adds nothing for that. tmux doesn't, so `plugins.linux.conf`
-wires `y`/`Enter` to `wl-copy` or `xclip` by hand.
+The Linux half lives in `tmux.linux.conf`; the Windows half is inlined, because
+psmux cannot expand `~` in `source-file` and no absolute path is portable.
+
+Two asymmetries worth knowing: psmux copies to the system clipboard natively,
+so only the Linux side wires `y`/`Enter` to `wl-copy`/`xclip`. And Windows uses
+psmux's built-in `choose-window`/`choose-session` rather than fzf popups —
+`display-popup` could not be made to launch an external command there.
+
+## Prompt
+
+`.config/prompt/` holds a matching pair — `prompt.ps1` and `prompt.sh` — sourced
+by the respective rc file. They must render identically; change one, change the
+other.
+
+This replaced starship. The prompt is a path, a branch and a character, and the
+branch already came from reading `.git/HEAD` directly, because letting starship
+open the repo cost ~130 ms per prompt. That left starship emitting colour codes
+for a process spawn on every Enter:
+
+| | per prompt |
+|---|---|
+| starship, as originally configured | 202 ms |
+| starship, fully stripped | ~40 ms |
+| `.config/prompt/` | **1.3 ms** |
 
 ## Line endings
 

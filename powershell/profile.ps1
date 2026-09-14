@@ -62,22 +62,15 @@ if (Test-Path -LiteralPath $script:GGModulePath) {
 #             already renders $git_branch and $git_status. Only tab-completion
 #             was unique, which is not worth half a second per shell.
 
-# --- prompt and navigation ----------------------------------------------------
-# Both inits are cached (see functions/init-cache.ps1): they spawn the tool to
-# print a script that only changes on upgrade. starship additionally gets its
-# scoop shim unwrapped, because the path it bakes into the prompt is invoked on
-# every single Enter.
-Use-CachedInit -Name 'starship' -Command 'starship' `
-    -Arguments @('init', 'powershell', '--print-full-init') `
-    -Transform {
-        param($s)
-        $shim = (Get-Command starship -CommandType Application | Select-Object -First 1).Source
-        $real = Resolve-ScoopShim $shim
-        if ($real -ne $shim) { $s = $s.Replace($shim, $real) }
-        $s
-    }
+# --- prompt -------------------------------------------------------------------
+# Native, no starship. The prompt is a path, a branch and a character; we were
+# already reading .git/HEAD ourselves, so starship was left emitting colour
+# codes for a process spawn on every Enter. See .config/prompt/prompt.ps1.
+. "$DotfilesRoot\.config\prompt\prompt.ps1"
 
-# --cmd c => `c` to jump, `ci` to pick interactively.
+# --- navigation ---------------------------------------------------------------
+# Cached (see functions/init-cache.ps1): zoxide spawns to print a script that
+# only changes on upgrade. --cmd c => `c` to jump, `ci` to pick interactively.
 Use-CachedInit -Name 'zoxide' -Command 'zoxide' -Arguments @('init', 'powershell', '--cmd', 'c')
 
 # --- psmux -------------------------------------------------------------------

@@ -12,7 +12,7 @@
        when an editor saves via write-temp-then-rename, which is how the
        PowerShell profile drifted out of sync before.
 
-    2. Env-var-first. starship, komorebi and whkd all accept a config path
+    2. Env-var-first. komorebi, whkd and psmux all accept a config path
        directly, so they get no link at all. Fewer moving parts than linking.
 
     3. The PowerShell profile is a generated one-line stub that dot-sources the
@@ -66,8 +66,8 @@ function Write-Plan($m) { Write-Host "  ? $m" -ForegroundColor Magenta;  $script
 # rather than listed, so adding a tool means adding a directory and nothing else.
 #
 # Directory junctions are the only link type available unprivileged, which is
-# fine here: loose FILES under .config/ (starship.toml) are not linked at all,
-# they are pointed at by an environment variable instead. See $EnvVars.
+# fine here: loose FILES under .config/ are not linked at all, they are pointed
+# at by an environment variable instead. See $EnvVars.
 $LinuxOnlyConfig = @('i3', 'i3status', 'rofi')
 
 $Junctions = @(
@@ -114,7 +114,6 @@ $EnvVars = [ordered]@{
     'XDG_DATA_HOME'        = "$Target\.local\share"
     'XDG_STATE_HOME'       = "$Target\.local\state"
     'XDG_CACHE_HOME'       = "$Target\.cache"
-    'STARSHIP_CONFIG'      = "$Repo\.config\starship.toml"
     # psmux does not follow tmux's XDG search, so point it straight at the
     # shared config. It branches internally with if-shell; there is no
     # Windows-specific config file and nothing is generated.

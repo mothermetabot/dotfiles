@@ -19,7 +19,6 @@ ripgrep	main/ripgrep	ripgrep	ripgrep
 fd	main/fd	fd	fd
 fzf	main/fzf	fzf	fzf
 zoxide	main/zoxide	zoxide	zoxide
-starship	main/starship	starship	starship
 lazygit	extras/lazygit	lazygit	lazygit
 uv	main/uv	uv	uv
 jq	main/jq	jq	jq
