@@ -125,10 +125,87 @@ ga() {
 }
 
 # Fuzzy navigation, matching the PowerShell functions of the same names.
+
+# cb: fuzzy-pick a directory (recursive) and cd into it.
 cb() {
   local sel
   sel=$(fd --type d | fzf) || return
   [ -n "$sel" ] && cd "$sel" || return
+}
+
+# cl: fuzzy-pick a file and cd to its containing directory.
+cl() {
+  local sel
+  sel=$(fzf) || return
+  [ -n "$sel" ] && cd "$(dirname "$sel")" || return
+}
+
+# cm: cd to the best-matching directory ONE level down. No picker, no recursion.
+#
+# cb/cl already cover "search everywhere and let me choose". cm is the other
+# case: you know roughly what the child is called and just want to be there.
+#
+# Deterministic ranking - the same pattern in the same directory always
+# resolves the same way:
+#
+#   0  name equals the pattern      cm nvim  -> ./nvim
+#   1  name starts with it          cm nv    -> ./nvim
+#   2  name contains it             cm onf   -> ./.config
+#
+# Only the BEST rank competes: an exact match always beats a prefix match, so
+# `cm i3` goes to i3 and never offers i3status.
+#
+# The pattern is matched LITERALLY - every expansion below quotes "$lpat", so
+# a `*` in the pattern is an ordinary character rather than a glob.
+#
+# On a tie within the best rank, fzf opens over just those candidates and Enter
+# navigates. Without fzf it takes the first alphabetically.
+#
+# The `.*/` in the loop is what lets `cm conf` see .config at all.
+#
+# The PowerShell twin is powershell/functions/navigation.ps1. Keep them in sync.
+cm() {
+  local pattern=$1
+  if [ -z "$pattern" ]; then echo "usage: cm <pattern>" >&2; return 2; fi
+
+  local lpat=${pattern,,}
+  local d name lname rank best_rank=99
+  local -a matched=()
+
+  for d in */ .*/; do
+    [ -d "$d" ] || continue
+    name=${d%/}
+    case "$name" in .|..) continue ;; esac
+
+    lname=${name,,}
+    if   [ "$lname" = "$lpat" ];                then rank=0
+    elif [ "${lname#"$lpat"}" != "$lname" ];    then rank=1
+    elif [[ $lname == *"$lpat"* ]];             then rank=2
+    else continue
+    fi
+
+    if   [ "$rank" -lt "$best_rank" ]; then best_rank=$rank; matched=("$name")
+    elif [ "$rank" -eq "$best_rank" ]; then matched+=("$name")
+    fi
+  done
+
+  case ${#matched[@]} in
+    0) echo "cm: no directory here matching '$pattern'" >&2; return 1 ;;
+    1) cd "${matched[0]}" || return ;;
+    *)
+      if ! command -v fzf >/dev/null 2>&1; then
+        # No fzf: first alphabetically, so the result stays deterministic.
+        mapfile -t matched < <(printf '%s\n' "${matched[@]}" | sort)
+        cd "${matched[0]}" || return
+        return
+      fi
+      local sel
+      sel=$(printf '%s\n' "${matched[@]}" | sort |
+            fzf --height 40% --reverse --prompt 'cm> ' \
+                --header "${#matched[@]} matches for '$pattern'") || return
+      [ -n "$sel" ] && cd "$sel" || return
+      ;;
+  esac
 }
 
 fvim() {

@@ -19,24 +19,50 @@ if (Get-Command bat -ErrorAction SilentlyContinue) {
     function cat { Get-Content @args }
 }
 
-# GNU ls-style long listing, matching `ll` in .bashrc.
-function ll {
-    param(
-        [string]$Path = '.',
-        [switch]$Force
+# ll / la: the real GNU ls, so Windows output is identical to Linux rather than
+# a PowerShell approximation of it. Same flags as the aliases in .bashrc:
+#
+#   ll -> ls -lafg     long, all, unsorted, no owner column
+#   la -> ls -lAh      long, almost-all, human-readable sizes
+#
+# scoop's coreutils is preferred over the copy bundled with Git for Windows.
+# Both work, but git's reports 0 bytes for every directory and raw numeric UIDs
+# where coreutils gives real sizes and group names.
+#
+# --color=always, not =auto: PowerShell captures the child's stdout, so `auto`
+# sees a non-TTY and disables colour. The cost is that `ll | Out-File` keeps the
+# escape codes - use `ls` for anything you intend to pipe.
+#
+# Resolved lazily and cached: this keeps the lookup out of shell startup, and
+# `ll` is interactive so a one-off resolve costs nothing noticeable.
+function script:Get-GnuLs {
+    if ($script:GnuLsPath) { return $script:GnuLsPath }
+
+    $candidates = @(
+        "$env:USERPROFILE\scoop\apps\coreutils\current\bin\ls.exe"
+        "$env:USERPROFILE\scoop\apps\git\current\usr\bin\ls.exe"
     )
-
-    $dirParams = @{ Path = $Path }
-    if ($Force) { $dirParams.Force = $true }
-
-    Get-ChildItem @dirParams |
-        Select-Object `
-            @{ Name = 'Size'; Expression = {
-                if ($_.PSIsContainer) { '<DIR>' }
-                else { '{0,10:N0}' -f $_.Length }
-            }},
-            @{ Name = 'LastWriteTime'; Expression = { $_.LastWriteTime } },
-            @{ Name = 'Name';          Expression = { $_.Name } }
+    foreach ($c in $candidates) {
+        if ([System.IO.File]::Exists($c)) { $script:GnuLsPath = $c; return $c }
+    }
+    # Last resort: whatever `ls` resolves to on PATH, ignoring the PowerShell alias.
+    $onPath = Get-Command ls -CommandType Application -ErrorAction SilentlyContinue |
+              Select-Object -First 1
+    if ($onPath) { $script:GnuLsPath = $onPath.Source; return $script:GnuLsPath }
+    return $null
 }
 
-function la { ll -Force @args }
+function ll {
+    $gnu = Get-GnuLs
+    if ($gnu) { & $gnu -lafg --color=always @args; return }
+    # No GNU ls: approximate rather than fail.
+    Get-ChildItem -Force @args |
+        Select-Object Mode, @{ N = 'Size'; E = { if ($_.PSIsContainer) { '<DIR>' } else { '{0,10:N0}' -f $_.Length } } },
+                      LastWriteTime, Name
+}
+
+function la {
+    $gnu = Get-GnuLs
+    if ($gnu) { & $gnu -lAh --color=always @args; return }
+    ll @args
+}
