@@ -18,20 +18,20 @@ function cl {
     Set-Location -LiteralPath (Split-Path -Parent $selection)
 }
 
-# cm: cd to the best-matching directory ONE level down. No picker, no recursion.
+# ch: cd to the best-matching directory ONE level down. No picker, no recursion.
 #
-# cb/cl already cover "search everywhere and let me choose". cm is the other
+# cb/cl already cover "search everywhere and let me choose". ch is the other
 # case: you know roughly what the child is called and just want to be there.
 #
 # Ranking is deterministic - the same pattern in the same directory always
 # resolves the same way:
 #
-#   0  name equals the pattern      cm nvim  -> ./nvim
-#   1  name starts with it          cm nv    -> ./nvim
-#   2  name contains it             cm onf   -> ./.config
+#   0  name equals the pattern      ch nvim  -> ./nvim
+#   1  name starts with it          ch nv    -> ./nvim
+#   2  name contains it             ch onf   -> ./.config
 #
 # Only the BEST rank competes: an exact match always beats a prefix match, so
-# `cm i3` goes to i3 and never offers i3status.
+# `ch i3` goes to i3 and never offers i3status.
 #
 # The pattern is matched LITERALLY. Comparisons use .NET string methods rather
 # than -like precisely so `*` and `?` are ordinary characters, not wildcards.
@@ -40,15 +40,15 @@ function cl {
 # navigates. Without fzf it takes the first alphabetically.
 #
 # GetDirectories includes hidden directories, which matters: without them
-# `cm conf` could never find .config.
+# `ch conf` could never find .config.
 #
 # The bash twin is in .bashrc. Change one, change the other.
-function cm {
+function ch {
     param([Parameter(Mandatory, Position = 0)][string]$Pattern)
 
     $cmp = [System.StringComparison]::OrdinalIgnoreCase
     $here = (Get-Location).ProviderPath
-    if (-not $here) { Write-Warning 'cm: not on a filesystem path'; return }
+    if (-not $here) { Write-Warning 'ch: not on a filesystem path'; return }
 
     $bestRank = 99
     $matched  = [System.Collections.Generic.List[string]]::new()
@@ -66,7 +66,7 @@ function cm {
     }
 
     if ($matched.Count -eq 0) {
-        Write-Warning "cm: no directory here matching '$Pattern'"
+        Write-Warning "ch: no directory here matching '$Pattern'"
         return
     }
     if ($matched.Count -eq 1) {
@@ -83,7 +83,7 @@ function cm {
 
     $selection = $sorted |
         ForEach-Object { [System.IO.Path]::GetFileName($_) } |
-        fzf --height 40% --reverse --prompt 'cm> ' `
+        fzf --height 40% --reverse --prompt 'ch> ' `
             --header "$($matched.Count) matches for '$Pattern'"
 
     if ($selection) { Set-Location -LiteralPath (Join-Path $here $selection) }

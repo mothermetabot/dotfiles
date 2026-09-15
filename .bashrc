@@ -58,8 +58,36 @@ fi
 # Windows build hangs on any listing, and keeping the two shells identical is
 # worth more than the colours.
 alias ls='ls --color=auto'
-alias ll='ls -lafg --color=auto'
 alias la='ls -lAh --color=auto'
+
+# ll shows size, date, name - no mode, no link count, no owner, no group.
+#
+# GNU ls cannot express that on its own: -g drops the owner and -G the group,
+# but -l always prints the mode and there is no column-selection flag. So take
+# `-lhgG --time-style=long-iso`, whose columns are then fixed at
+#
+#     mode  links  size  date  time  name
+#
+# and drop the first two. long-iso matters: the default time format uses a
+# different number of fields for recent vs old files, which would shift the
+# name column depending on file age.
+#
+# The name is everything from field 6 on, so spaces in filenames survive - and
+# so do the colour escapes, which are part of the name text.
+#
+# powershell/functions/modern-cli.ps1 does the same reformat with a regex.
+# Keep the two column layouts identical.
+ll() {
+  ls -lhgG -a --time-style=long-iso --color=always "$@" | awk '
+    /^total /  { next }
+    {
+      size = $3; when = $4 " " $5
+      $1 = $2 = $3 = $4 = $5 = ""
+      sub(/^ +/, "")
+      printf "%6s  %s  %s
+", size, when, $0
+    }'
+}
 
 if command -v bat >/dev/null 2>&1; then
   # --paging=never so cat stays usable in pipelines instead of opening a pager.
@@ -140,20 +168,20 @@ cl() {
   [ -n "$sel" ] && cd "$(dirname "$sel")" || return
 }
 
-# cm: cd to the best-matching directory ONE level down. No picker, no recursion.
+# ch: cd to the best-matching directory ONE level down. No picker, no recursion.
 #
-# cb/cl already cover "search everywhere and let me choose". cm is the other
+# cb/cl already cover "search everywhere and let me choose". ch is the other
 # case: you know roughly what the child is called and just want to be there.
 #
 # Deterministic ranking - the same pattern in the same directory always
 # resolves the same way:
 #
-#   0  name equals the pattern      cm nvim  -> ./nvim
-#   1  name starts with it          cm nv    -> ./nvim
-#   2  name contains it             cm onf   -> ./.config
+#   0  name equals the pattern      ch nvim  -> ./nvim
+#   1  name starts with it          ch nv    -> ./nvim
+#   2  name contains it             ch onf   -> ./.config
 #
 # Only the BEST rank competes: an exact match always beats a prefix match, so
-# `cm i3` goes to i3 and never offers i3status.
+# `ch i3` goes to i3 and never offers i3status.
 #
 # The pattern is matched LITERALLY - every expansion below quotes "$lpat", so
 # a `*` in the pattern is an ordinary character rather than a glob.
@@ -161,12 +189,12 @@ cl() {
 # On a tie within the best rank, fzf opens over just those candidates and Enter
 # navigates. Without fzf it takes the first alphabetically.
 #
-# The `.*/` in the loop is what lets `cm conf` see .config at all.
+# The `.*/` in the loop is what lets `ch conf` see .config at all.
 #
 # The PowerShell twin is powershell/functions/navigation.ps1. Keep them in sync.
-cm() {
+ch() {
   local pattern=$1
-  if [ -z "$pattern" ]; then echo "usage: cm <pattern>" >&2; return 2; fi
+  if [ -z "$pattern" ]; then echo "usage: ch <pattern>" >&2; return 2; fi
 
   local lpat=${pattern,,}
   local d name lname rank best_rank=99
@@ -190,7 +218,7 @@ cm() {
   done
 
   case ${#matched[@]} in
-    0) echo "cm: no directory here matching '$pattern'" >&2; return 1 ;;
+    0) echo "ch: no directory here matching '$pattern'" >&2; return 1 ;;
     1) cd "${matched[0]}" || return ;;
     *)
       if ! command -v fzf >/dev/null 2>&1; then
@@ -201,7 +229,7 @@ cm() {
       fi
       local sel
       sel=$(printf '%s\n' "${matched[@]}" | sort |
-            fzf --height 40% --reverse --prompt 'cm> ' \
+            fzf --height 40% --reverse --prompt 'ch> ' \
                 --header "${#matched[@]} matches for '$pattern'") || return
       [ -n "$sel" ] && cd "$sel" || return
       ;;
