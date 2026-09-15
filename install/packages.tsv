@@ -51,11 +51,14 @@ netcoredbg	main/netcoredbg	-	-
 aria2	main/aria2	-	-
 
 # --- GNU coreutils -----------------------------------------------------------
-# NOT just scoop plumbing: `ll` in powershell/functions/modern-cli.ps1 shells
-# out to coreutils' ls.exe so the listing matches Linux exactly instead of being
-# approximated with Get-ChildItem. Git for Windows bundles an ls too and is used
-# as a fallback, but it reports 0 bytes for every directory and raw numeric
-# UIDs. On Linux this is already part of the base system.
+# NOT just scoop plumbing, and NOT optional: `ll` and `la` in
+# powershell/functions/modern-cli.ps1 invoke ls.exe directly, with no fallback
+# and no availability check. Without this package both fail with "the term
+# 'ls.exe' is not recognized".
+#
+# Git for Windows bundles an ls too, but it is deliberately not used: it reports
+# 0 bytes for every directory and raw numeric UIDs. If the scoop shim ever loses
+# to it on PATH, that is the symptom. On Linux this is part of the base system.
 coreutils	main/coreutils	coreutils	coreutils
 which	main/which	-	-
 winget	main/winget	-	-

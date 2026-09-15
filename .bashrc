@@ -60,34 +60,19 @@ fi
 alias ls='ls --color=auto'
 alias la='ls -lAh --color=auto'
 
-# ll shows size, date, name - no mode, no link count, no owner, no group.
+# ll: long listing without the owner and group columns.
 #
-# GNU ls cannot express that on its own: -g drops the owner and -G the group,
-# but -l always prints the mode and there is no column-selection flag. So take
-# `-lhgG --time-style=long-iso`, whose columns are then fixed at
+#   -l  long listing        -g  hide the owner
+#   -h  human-readable      -G  hide the group
+#   -a  include dotfiles
 #
-#     mode  links  size  date  time  name
+# -g and -G are as close to "size, date, name" as ls gets on its own. The mode
+# and link-count columns stay, because -l always prints them and there is no
+# column-selection flag. Reformatting to drop them costs a second process and
+# loses ls's colours, which is not worth it.
 #
-# and drop the first two. long-iso matters: the default time format uses a
-# different number of fields for recent vs old files, which would shift the
-# name column depending on file age.
-#
-# The name is everything from field 6 on, so spaces in filenames survive - and
-# so do the colour escapes, which are part of the name text.
-#
-# powershell/functions/modern-cli.ps1 does the same reformat with a regex.
-# Keep the two column layouts identical.
-ll() {
-  ls -lhgG -a --time-style=long-iso --color=always "$@" | awk '
-    /^total /  { next }
-    {
-      size = $3; when = $4 " " $5
-      $1 = $2 = $3 = $4 = $5 = ""
-      sub(/^ +/, "")
-      printf "%6s  %s  %s
-", size, when, $0
-    }'
-}
+# powershell/functions/modern-cli.ps1 has the same two definitions.
+alias ll='ls -lhgGa --color=auto'
 
 if command -v bat >/dev/null 2>&1; then
   # --paging=never so cat stays usable in pipelines instead of opening a pager.
