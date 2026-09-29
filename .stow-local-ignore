@@ -2,8 +2,17 @@
 # in it is $HOME content.
 #
 # Patterns are Perl regexes anchored against the path relative to this package.
-# Stow already ignores .git, .gitignore, and root-level README.*/LICENSE.* by
-# default; everything below is what its default list does not cover.
+#
+# Stow's built-in ignore list (.git, .gitignore, README.*, LICENSE.* and so on)
+# is NOT used once this file exists: this file replaces it. So those entries
+# have to be listed here, or stow links ~/.git at the repo and turns the whole
+# home directory into a git working tree.
+
+# Repo metadata.
+^/\.git$
+^/\.gitignore$
+^/README.*
+^/LICENSE.*
 
 # Bootstrap machinery - not config.
 ^/bootstrap\.ps1$

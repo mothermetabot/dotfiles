@@ -101,10 +101,12 @@ Anything with a credential, a proxy or an absolute path belongs in a
 ## Packages
 
 `install/packages.tsv` is the single manifest, with a column per package
-manager. Linux needs two sources: **Homebrew on Linux ships no GUI or
-display-server packages**, so i3, fonts and anything X/Wayland must come from
-the distro, while the CLI tools come from brew to match the scoop versions on
-Windows.
+manager. On Linux, Homebrew is the main source. `bootstrap.sh` first installs
+git and Homebrew's prerequisites from the distro, then installs Homebrew itself
+if it is missing. Every package with a brew formula then comes from brew, to
+match the scoop versions on Windows. **Homebrew on Linux ships no GUI or
+display-server packages**, so only those rows, such as i3, rofi and kitty,
+still come from the distro.
 
 Fonts are not tracked as binaries. Windows installs CommitMono Nerd Font from
 the scoop `nerd-fonts` bucket; Linux uses [`getnf`](https://github.com/getnf/getnf).

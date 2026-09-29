@@ -6,6 +6,12 @@
 #   brew     homebrew formula, or - if unavailable / not appropriate via brew
 #   linux    distro package name (pacman/apt), or - if not applicable
 #
+# On Linux a row with a brew formula is installed from brew ONLY, and its linux
+# column is ignored. The linux column is used just for rows whose brew column
+# is -. Keep it that way: the linux names are not portable across distros
+# (Debian has no lazygit or uv, and calls fd `fd-find`), so every tool brew can
+# provide should come from brew.
+#
 # A `local:` prefix in the scoop or brew column means a manifest kept in this
 # repo, resolved relative to the repo root. That covers tools published only as
 # GitHub releases, with no bucket or tap of their own.
@@ -91,7 +97,8 @@ rofi	-	-	rofi
 # Terminal for i3. Windows uses Windows Terminal, which has no Linux build, so
 # this is the one tool with no cross-platform counterpart. Change it here and in
 # `set $term` at the top of .config/i3/config together.
-kitty	-	kitty	kitty
+# Homebrew only ships kitty as a macOS cask, so on Linux it comes from the distro.
+kitty	-	-	kitty
 # xclip is the X11 clipboard helper that .config/tmux/tmux.linux.conf falls
 # back to when wl-copy (Wayland) is unavailable.
 xclip	-	-	xclip

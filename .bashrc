@@ -6,6 +6,19 @@
 # the bootstrap actually performed. All of that is gone; `dev` in the
 # PowerShell profile is the Windows equivalent.
 
+# --- Homebrew -----------------------------------------------------------------
+# Most CLI tools come from Homebrew on Linux, see bootstrap.sh. This sits above
+# the interactive check so login shells running a command (`ssh host cmd`,
+# `bash -lc`) find them too. The two paths are the installer's shared and
+# per-user prefixes.
+for _brew in /home/linuxbrew/.linuxbrew/bin/brew "$HOME/.linuxbrew/bin/brew"; do
+  if [ -x "$_brew" ]; then
+    eval "$("$_brew" shellenv)"
+    break
+  fi
+done
+unset _brew
+
 # Skip everything when not interactive (prevents bind warnings in scripts).
 case $- in
   *i*) ;;

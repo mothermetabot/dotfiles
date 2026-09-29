@@ -2,12 +2,13 @@
 # built from source - the release ships a static x86_64 binary, so there is no
 # reason to pull in a Rust toolchain.
 #
-# Install:
-#   brew install --formula ~/.dotfiles/install/brew/gg.rb
+# Install: bootstrap.sh does it. Homebrew refuses a formula given as a file path
+# ("requires formulae to be in a tap"), so the bootstrap copies this file into
+# a machine-local tap, local/dotfiles, and runs `brew install local/dotfiles/gg`.
 #
-# A local formula path avoids needing a tap. If you ever want `brew install gg`
-# to work unqualified, move this file to a repo named homebrew-<something> under
-# Formula/ and `brew tap mothermetabot/<something>`.
+# If you ever want `brew install gg` to work on any machine, move this file to a
+# repo named homebrew-<something> under Formula/ and
+# `brew tap mothermetabot/<something>`.
 #
 # The Windows counterpart is ../scoop/gg.json.
 
