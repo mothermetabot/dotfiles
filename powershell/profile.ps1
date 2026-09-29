@@ -81,6 +81,14 @@ if (-not $env:PSMUX_CONFIG_FILE) {
     $env:PSMUX_CONFIG_FILE = "$DotfilesRoot\.config\tmux\tmux.conf"
 }
 
+# --- AI agents ----------------------------------------------------------------
+# Where planning agents (e.g. the /impl-plan skill) drop per-plan folders with
+# IMPLEMENTATION_PLAN.md and IMPLEMENTATION_LOG.md. The skill falls back to
+# %TEMP% when this is unset. Override in profile.local.ps1 if needed.
+if (-not $env:AGENT_IMPLEMENTATION_DIR) {
+    $env:AGENT_IMPLEMENTATION_DIR = "$HOME\home\temp\AI\implementations"
+}
+
 # --- machine-local overrides --------------------------------------------------
 # Gitignored. Put work-specific paths, proxies and credentials here.
 $localProfile = "$PSScriptRoot\profile.local.ps1"

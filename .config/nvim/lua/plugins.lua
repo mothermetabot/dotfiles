@@ -206,7 +206,8 @@ return {
         src = 'nvim-telescope/telescope-fzf-native.nvim',
         build = function()
           if vim.fn.executable 'make' == 0 then
-            vim.notify('telescope-fzf-native: `make` not found, skipping build (telescope uses its default sorter)', vim.log.levels.WARN)
+            vim.notify('telescope-fzf-native: `make` not found, skipping build (telescope uses its default sorter)',
+              vim.log.levels.WARN)
             return
           end
           local dir = vim.fs.joinpath(vim.fn.stdpath 'data', 'site', 'pack', 'core', 'opt', 'telescope-fzf-native.nvim')
@@ -300,6 +301,8 @@ return {
   -----------------------------------------------------------------------------
   -- LSP (native vim.lsp, no Mason) + formatting
   -----------------------------------------------------------------------------
+
+
   {
     -- No blink.cmp dep: lsp.lua pulls blink's capabilities via a plain
     -- require (packadd! keeps its lua/ on rtp), so the full completion stack
@@ -318,13 +321,14 @@ return {
       require('conform').setup {
         formatters_by_ft = {
           lua = { 'stylua' },
+          cs = { 'csharpier' },
           yaml = { 'prettier', lsp_format = 'fallback' },
           json = { 'prettier', lsp_format = 'fallback' },
           rust = { 'rustfmt', lsp_format = 'fallback' },
           python = { 'black' },
           ['*'] = { 'codespell' },
         },
-        format_on_save = { lsp_format = 'fallback', timeout_ms = 500 },
+        format_on_save = { lsp_format = 'fallback', timeout_ms = 2000 },
         log_level = vim.log.levels.ERROR,
         notify_on_error = true,
         notify_no_formatters = true,
@@ -373,7 +377,8 @@ return {
       local app = vim.fs.joinpath(root, 'app')
       -- Release tag lives in the ROOT package.json (0.0.10); app/package.json
       -- holds an unrelated stale version (0.0.1) with no matching release.
-      local version = 'v' .. vim.json.decode(table.concat(vim.fn.readfile(vim.fs.joinpath(root, 'package.json')))).version
+      local version = 'v' ..
+          vim.json.decode(table.concat(vim.fn.readfile(vim.fs.joinpath(root, 'package.json')))).version
       if vim.fn.has 'win32' == 0 then
         local out = vim.system({ 'sh', vim.fs.joinpath(app, 'install.sh'), version }, { cwd = app }):wait()
         if out.code ~= 0 then
@@ -381,17 +386,19 @@ return {
         end
         return
       end
-      local url = ('https://github.com/iamcco/markdown-preview.nvim/releases/download/%s/markdown-preview-win.zip'):format(version)
+      local url = ('https://github.com/iamcco/markdown-preview.nvim/releases/download/%s/markdown-preview-win.zip')
+          :format(version)
       local zip = vim.fs.joinpath(app, 'markdown-preview-win.zip')
       local bin = vim.fs.joinpath(app, 'bin')
       vim.fn.mkdir(bin, 'p')
       for _, cmd in ipairs {
         { 'curl.exe', '-fsSL', url, '-o', zip },
-        { 'tar.exe', '-xf', zip, '-C', bin },
+        { 'tar.exe',  '-xf',   zip, '-C', bin },
       } do
         local out = vim.system(cmd, { cwd = app }):wait()
         if out.code ~= 0 then
-          vim.notify(('markdown-preview: install failed at `%s`\n%s'):format(cmd[1], out.stderr or ''), vim.log.levels.ERROR)
+          vim.notify(('markdown-preview: install failed at `%s`\n%s'):format(cmd[1], out.stderr or ''),
+            vim.log.levels.ERROR)
           return
         end
       end
@@ -433,8 +440,8 @@ return {
     event = READ,
     config = function()
       local highlight = {
-        'Crayola', 'Wisteria', 'Sunglow', 'JordyBlue','Vanilla', 'CelestialBlue',
-        'PantoneOrange', 'NaplesYellow',  'Cerise', 'RaspberryRose',
+        'Crayola', 'Wisteria', 'Sunglow', 'JordyBlue', 'Vanilla', 'CelestialBlue',
+        'PantoneOrange', 'NaplesYellow', 'Cerise', 'RaspberryRose',
       }
       local hooks = require 'ibl.hooks'
       hooks.register(hooks.type.HIGHLIGHT_SETUP, function()
