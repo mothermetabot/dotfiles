@@ -179,6 +179,24 @@ function New-Junction([string]$Link, [string]$LinkTarget) {
     New-Item -ItemType Junction -Path $Link -Target $LinkTarget -ErrorAction Stop | Out-Null
 }
 
+# PS 5.1 leaves junctions unresolved in .FullName. Walk the parent chain and
+# substitute each reparse point for its target, so a link path and a target can
+# be compared for actual on-disk identity rather than by spelling.
+function Resolve-RealPath([string]$Path) {
+    $cur = $Path.TrimEnd('\'); $rest = @()
+    while ($cur) {
+        if (Test-IsReparsePoint $cur) {
+            $t = Get-JunctionTarget $cur
+            if ($t) { $cur = $t; continue }
+        }
+        $parent = Split-Path -Parent $cur
+        if (-not $parent -or $parent -eq $cur) { break }
+        $rest = ,(Split-Path -Leaf $cur) + $rest
+        $cur  = $parent
+    }
+    return (@($cur.TrimEnd('\')) + $rest) -join '\'
+}
+
 # =============================================================================
 # 0. Preconditions
 # =============================================================================
@@ -304,7 +322,20 @@ Write-Head '[2/7] Base directories'
 
 foreach ($d in $RealDirs) {
     if (Test-IsReparsePoint $d) {
-        Write-Warn "$d is a junction; it must be a real directory - not touching it"
+        # A junctioned ~/.config (bootstrap.bat's doing) aliases the deploy
+        # target onto the source: $Xdg\git then resolves back into the repo, so
+        # step 3's "back up the existing dir" branch renames the repo's own
+        # .config\git and the junction that follows fails on a missing target.
+        # Dropping the reparse point loses nothing - step 3 re-links every
+        # subdirectory it pointed at. Only safe when it points at this repo.
+        $t = Get-JunctionTarget $d
+        if ($t -ine "$Repo\.config") {
+            throw "'$d' is a junction to '$t', which is not this repo. Resolve it by hand before re-running."
+        }
+        if ($DryRun) { Write-Plan "would replace junction $d ($t) with a real directory"; continue }
+        Remove-JunctionSafely $d   # deletes the link only, never the target
+        New-Item -ItemType Directory -Path $d -Force | Out-Null
+        Write-Do "replaced junction $d ($t) with a real directory"
         continue
     }
     if (Test-Path -LiteralPath $d) { Write-Skip $d; continue }
@@ -340,6 +371,14 @@ foreach ($j in $Junctions) {
                 Write-Do "relinked $($j.Name) -> $want"
             }
         } else {
+            # Link and Target are the same directory, reached through an
+            # aliased parent (a junctioned ~/.config, or $env:HOME pointing at
+            # %USERPROFILE%). Backing it up would rename the repo's own files,
+            # so refuse rather than "move it out of the way".
+            if ((Resolve-RealPath $j.Link) -ieq (Resolve-RealPath $want)) {
+                Write-Warn "$($j.Name): $($j.Link) already resolves to $want via an aliased parent - skipping"
+                continue
+            }
             # A real directory with real content. Never delete it blind.
             $n = @(Get-ChildItem -LiteralPath $j.Link -Force -ErrorAction SilentlyContinue).Count
             if ($n -gt 0) {
