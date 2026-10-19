@@ -43,6 +43,8 @@ tree-sitter	main/tree-sitter	tree-sitter	tree-sitter-cli
 nodejs	main/nodejs	node	nodejs
 rustup	main/rustup	rustup-init	rustup
 mdcat	pawelb0/mdcat-ng	mdcat	mdcat
+# eva: calculator REPL; aliased to `e` in .bashrc and the PS profile.
+eva	main/eva	eva	-
 
 # --- language servers / debug adapters used by .config/nvim ------------------
 # lua-language-server is referenced by nvim/lua/lsp.lua

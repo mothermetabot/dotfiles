@@ -87,6 +87,9 @@ alias la='ls -lAh --color=auto'
 # powershell/functions/modern-cli.ps1 has the same two definitions.
 alias ll='ls -lhgGa --color=auto'
 
+# e: eva, the calculator. powershell/functions/modern-cli.ps1 has the same alias.
+alias e='eva'
+
 if command -v bat >/dev/null 2>&1; then
   # --paging=never so cat stays usable in pipelines instead of opening a pager.
   alias cat='bat --paging=never'

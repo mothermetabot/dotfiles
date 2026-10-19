@@ -46,3 +46,6 @@ function ll { ls.exe -lhgGa --color=always @args }
 
 # la: the full long listing, every column, all but . and ..
 function la { ls.exe -lAh --color=always @args }
+
+# e: eva, the calculator. Same alias in .bashrc.
+function e { eva @args }
