@@ -49,6 +49,8 @@ if (Get-Command Set-PSReadLineKeyHandler -ErrorAction SilentlyContinue) {
         for ($i = $all.Length - 1; $i -ge 0; $i--) {
             $e = $all[$i]
             if ([string]::IsNullOrWhiteSpace($e)) { continue }
+            # psmux's per-pane `cd ...; cls` injection; see history.ps1.
+            if ($e -like '*SetCurrentDirectory($PWD.ProviderPath)*') { continue }
             if ($seen.Add($e)) { $entries.Add($e) }
         }
 
