@@ -21,7 +21,8 @@ if (Get-Command bat -ErrorAction SilentlyContinue) {
 # ll / la both exec GNU ls directly - no capture, no reformat, no fallback.
 #
 # `ls.exe` (not `ls`, which is the PowerShell alias for Get-ChildItem) resolves
-# through the scoop shim to coreutils. There is deliberately no availability
+# through the scoop shim to coreutils (uutils-coreutils on Windows, see
+# install/packages.tsv for why). There is deliberately no availability
 # check: if coreutils is missing, ll fails with "the term 'ls.exe' is not
 # recognized", which means run the bootstrap. coreutils is in
 # install/packages.tsv for all three platforms.
