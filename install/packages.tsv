@@ -41,6 +41,10 @@ curl	main/curl	curl	curl
 bat	main/bat	bat	bat
 tree-sitter	main/tree-sitter	tree-sitter	tree-sitter-cli
 nodejs	main/nodejs	node	nodejs
+# rustup installs the toolchain manager, not a linker. On Windows the default
+# x86_64-pc-windows-msvc target needs the MSVC C++ toolset, which no scoop
+# bucket carries - bootstrap.ps1's MSVC step offers it via winget instead. On
+# Linux the distro cc covers it.
 rustup	main/rustup	rustup-init	rustup
 mdcat	pawelb0/mdcat-ng	mdcat	mdcat
 # eva: calculator REPL; aliased to `e` in .bashrc and the PS profile.

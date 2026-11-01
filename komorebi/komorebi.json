@@ -14,6 +14,13 @@
     "unfocused_border": "Base03",
     "bar_accent": "Base0D"
   },
+  "floating_applications": [
+    {
+      "kind": "Exe",
+      "id": "(?i)^godot",
+      "matching_strategy": "Regex"
+    }
+  ],
   "monitors": [
     {
       "workspaces": [
@@ -31,7 +38,14 @@
         },
         {
           "name": "C2",
-          "layout": "UltrawideVerticalStack"
+          "layout": "UltrawideVerticalStack",
+          "workspace_rules": [
+            {
+              "kind": "Exe",
+              "id": "(?i)^godot",
+              "matching_strategy": "Regex"
+            }
+          ]
         },
         {
           "name": "C3",

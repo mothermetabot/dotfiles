@@ -30,6 +30,27 @@ startup.log
 .config/git/gitk
 .config/git/gitk.bak
 
+# --- Claude Code --------------------------------------------------------------
+# Only .claude/{skills,agents,commands} and settings.json are deployed; the
+# rest of ~/.claude is session state and must never be committed. These are
+# belt-and-braces: nothing links them in today, but .credentials.json reaching
+# a git repo is bad enough to be worth spelling out.
+.claude/.credentials.json
+.claude/history.jsonl
+.claude/projects/
+.claude/sessions/
+.claude/session-env/
+.claude/shell-snapshots/
+.claude/todos/
+.claude/tasks/
+.claude/teams/
+.claude/backups/
+.claude/cache/
+.claude/paste-cache/
+.claude/file-history/
+.claude/statsig/
+.claude/settings.local.json
+
 # --- vendored upstream data, fetched by bootstrap ----------------------------
 # 62 KB of third-party window rules. komorebi regenerates it with
 # `komorebic fetch-app-specific-configuration`; bootstrap.ps1 does that for you.

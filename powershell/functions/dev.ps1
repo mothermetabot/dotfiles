@@ -33,13 +33,21 @@ Usage:
 
             $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
             if (-not (Test-Path $vswhere)) {
-                Write-Error 'Could not find vswhere.exe.'
+                Write-Error 'Could not find vswhere.exe - no Visual Studio installer is present. Run bootstrap.ps1.'
                 return
             }
 
-            $installPath = & $vswhere -latest -products * -property installationPath
+            # -requires is what makes this honest. Without it vswhere happily
+            # returns a Build Tools install carrying no C++ workload, which is
+            # exactly what `winget install` of the Build Tools package leaves
+            # behind. The dev shell then loads, reports success, and hands you
+            # a prompt with no cl.exe and no link.exe - so cargo fails at the
+            # link step while this function insists the environment is ready.
+            $installPath = & $vswhere -latest -products * `
+                -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 `
+                -property installationPath
             if (-not $installPath) {
-                Write-Error 'Could not find a Visual Studio installation.'
+                Write-Error 'No Visual Studio installation carries the C++ workload. Run bootstrap.ps1 to add it.'
                 return
             }
 
@@ -83,7 +91,16 @@ Usage:
             }
 
             $script:DevEnvironmentActive = $true
-            Write-Host 'Visual Studio developer environment loaded.'
+
+            # The -requires filter above should make this impossible, but the
+            # whole point of this function is that the caller can trust the
+            # message. Check the thing that actually matters rather than
+            # announcing success on faith.
+            if (Get-Command link.exe -ErrorAction SilentlyContinue) {
+                Write-Host 'Visual Studio developer environment loaded.'
+            } else {
+                Write-Warning 'Developer environment loaded, but link.exe is still not on PATH.'
+            }
         }
 
         'off' {
