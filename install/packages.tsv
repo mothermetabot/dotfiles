@@ -45,6 +45,8 @@ rustup	main/rustup	rustup-init	rustup
 mdcat	pawelb0/mdcat-ng	mdcat	mdcat
 # eva: calculator REPL; aliased to `e` in .bashrc and the PS profile.
 eva	main/eva	eva	-
+# merman-cli: headless Mermaid diagram renderer (Rust, no Node/Chromium).
+merman-cli	main/merman-cli	merman-cli	-
 
 # --- language servers / debug adapters used by .config/nvim ------------------
 # lua-language-server is referenced by nvim/lua/lsp.lua
